@@ -63,7 +63,7 @@ void setup(void) {
 
 
   gfx->setTextColor(BLUE);
-  for (int y = 0; y < numCols; y++) {
+  for (int y = 0; y < numRows; y++) {
     gfx->setCursor(2, 12 + y * charHeight);
     gfx->print(y, 16);
   }

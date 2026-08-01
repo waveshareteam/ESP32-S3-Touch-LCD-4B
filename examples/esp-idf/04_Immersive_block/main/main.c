@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <float.h>
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
@@ -44,6 +45,9 @@ typedef struct {
 #define ACCEL_SCALE_FACTOR 5
 #define TASK_DELAY_MS 20
 #define CALIBRATION_DEADZONE 0.05f
+#define CALIBRATION_SAMPLES 200
+#define CALIBRATION_MAX_ATTEMPTS 5
+#define CALIBRATION_MAX_RANGE 0.1f
 
 #define SCREEN_WIDTH_MM  33.09f
 #define SCREEN_HEIGHT_MM 41.51f
@@ -155,44 +159,57 @@ void generate_random_shapes() {
 
 void perform_level_calibration(qmi8658_dev_t *dev) {
     qmi8658_data_t data;
-    const int CALIB_SAMPLES = 200;
-    float sum_x = 0.0f, sum_y = 0.0f;
-    float max_x = -10.0f, min_x = 10.0f;
-    float max_y = -10.0f, min_y = 10.0f;
-    
+
     ESP_LOGI(TAG, "Starting level calibration...");
     ESP_LOGI(TAG, "Please place device on a level surface");
-    
-    for (int i = 0; i < CALIB_SAMPLES; i++) {
-        if (qmi8658_read_sensor_data(dev, &data) == ESP_OK) {
-            sum_x += data.accelX;
-            sum_y += data.accelY;
-            
-            if (data.accelX > max_x) max_x = data.accelX;
-            if (data.accelX < min_x) min_x = data.accelX;
-            if (data.accelY > max_y) max_y = data.accelY;
-            if (data.accelY < min_y) min_y = data.accelY;
+
+    for (int attempt = 0; attempt < CALIBRATION_MAX_ATTEMPTS; ++attempt) {
+        int valid_samples = 0;
+        float sum_x = 0.0f, sum_y = 0.0f;
+        float max_x = -FLT_MAX, min_x = FLT_MAX;
+        float max_y = -FLT_MAX, min_y = FLT_MAX;
+
+        for (int i = 0; i < CALIBRATION_SAMPLES; ++i) {
+            if (qmi8658_read_sensor_data(dev, &data) == ESP_OK) {
+                sum_x += data.accelX;
+                sum_y += data.accelY;
+                valid_samples++;
+
+                if (data.accelX > max_x) max_x = data.accelX;
+                if (data.accelX < min_x) min_x = data.accelX;
+                if (data.accelY > max_y) max_y = data.accelY;
+                if (data.accelY < min_y) min_y = data.accelY;
+            }
+            vTaskDelay(pdMS_TO_TICKS(10));
         }
-        vTaskDelay(pdMS_TO_TICKS(10));
+
+        if (valid_samples < (CALIBRATION_SAMPLES / 2)) {
+            ESP_LOGW(TAG, "Calibration read too few samples (%d/%d). Retrying...",
+                     valid_samples, CALIBRATION_SAMPLES);
+            continue;
+        }
+
+        float range_x = max_x - min_x;
+        float range_y = max_y - min_y;
+        if ((range_x <= CALIBRATION_MAX_RANGE) && (range_y <= CALIBRATION_MAX_RANGE)) {
+            accel_bias_x = sum_x / valid_samples;
+            accel_bias_y = sum_y / valid_samples;
+
+            calibration_done = true;
+            ESP_LOGI(TAG, "Calibration complete. Bias X: %.4f m/s², Bias Y: %.4f m/s²",
+                     accel_bias_x, accel_bias_y);
+            ESP_LOGI(TAG, "Device is now level. Shapes should be stationary.");
+            return;
+        }
+
+        if (attempt + 1 < CALIBRATION_MAX_ATTEMPTS) {
+            ESP_LOGW(TAG, "Calibration unstable (X range: %.4f, Y range: %.4f). Retrying...",
+                     range_x, range_y);
+        }
     }
-    
-    float range_x = max_x - min_x;
-    float range_y = max_y - min_y;
-    
-    if (range_x > 0.1f || range_y > 0.1f) {
-        ESP_LOGW(TAG, "Calibration unstable (X range: %.4f, Y range: %.4f). Retrying...", 
-                 range_x, range_y);
-        perform_level_calibration(dev);
-        return;
-    }
-    
-    accel_bias_x = sum_x / CALIB_SAMPLES;
-    accel_bias_y = sum_y / CALIB_SAMPLES;
-    
-    calibration_done = true;
-    ESP_LOGI(TAG, "Calibration complete. Bias X: %.4f m/s², Bias Y: %.4f m/s²", 
-             accel_bias_x, accel_bias_y);
-    ESP_LOGI(TAG, "Device is now level. Shapes should be stationary.");
+
+    ESP_LOGE(TAG, "Calibration failed after %d attempts; keeping the previous calibration",
+             CALIBRATION_MAX_ATTEMPTS);
 }
 
 void apply_calibration_and_deadzone(qmi8658_data_t *data) {

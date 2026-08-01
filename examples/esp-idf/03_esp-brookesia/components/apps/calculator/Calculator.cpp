@@ -143,9 +143,8 @@ bool Calculator::isStartZero(void)
         // LOG_I(TAG, "start 0");
         return true;
     }
-    if ((text[text_len - 1] == '0') &&
-        (text[text_len - 2] > '9') &&
-        (text[text_len - 2] < '0')) {
+    if ((text_len >= 2) && (text[text_len - 1] == '0') &&
+        ((text[text_len - 2] < '0') || (text[text_len - 2] > '9'))) {
         // LOG_I(TAG, "start 0");
         return true;
     }
@@ -158,7 +157,8 @@ bool Calculator::isStartNum(void)
     const char *text = lv_label_get_text(formula_label);
     int text_len = strlen(text);
 
-    if ((text[text_len - 1] >= '0') && (text[text_len - 1] <= '9')) {
+    if ((text_len > 0) && (text[text_len - 1] >= '0') &&
+        (text[text_len - 1] <= '9')) {
         // LOG_I(TAG, "start num");
         return true;
     }
@@ -171,7 +171,7 @@ bool Calculator::isStartPercent(void)
     const char *text = lv_label_get_text(formula_label);
     int text_len = strlen(text);
 
-    if (text[text_len - 1] == '%') {
+    if ((text_len > 0) && (text[text_len - 1] == '%')) {
         // LOG_I(TAG, "start %");
         return true;
     }
@@ -433,7 +433,7 @@ void Calculator::keyboard_event_cb(lv_event_t *e)
 
             lv_label_set_text_fmt(app->formula_label, "%s", res_str);
             lv_obj_set_style_text_font(app->formula_label, LABEL_FONT_SMALL, 0);
-            app->formula_len = strlen(history_str);
+            app->formula_len = strlen(res_str);
         }
     }
 }

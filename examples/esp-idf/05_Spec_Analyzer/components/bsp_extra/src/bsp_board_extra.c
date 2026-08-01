@@ -246,13 +246,15 @@ esp_err_t bsp_extra_player_play_index(file_iterator_instance_t *instance, int in
     ESP_LOGI(TAG, "Playing '%s'", filename);
     ESP_RETURN_ON_ERROR(audio_player_play(fp), TAG, "audio_player_play failed");
 
-    memcpy(audio_file_path, filename, sizeof(audio_file_path));
+    strlcpy(audio_file_path, filename, sizeof(audio_file_path));
 
     return ESP_OK;
 }
 
 esp_err_t bsp_extra_player_play_file(const char *file_path)
 {
+    ESP_RETURN_ON_FALSE(file_path, ESP_FAIL, TAG, "file_path is NULL");
+
     ESP_LOGI(TAG, "opening file '%s'", file_path);
     FILE *fp = fopen(file_path, "rb");
     ESP_RETURN_ON_FALSE(fp, ESP_FAIL, TAG, "unable to open file");
@@ -260,7 +262,7 @@ esp_err_t bsp_extra_player_play_file(const char *file_path)
     ESP_LOGI(TAG, "Playing '%s'", file_path);
     ESP_RETURN_ON_ERROR(audio_player_play(fp), TAG, "audio_player_play failed");
 
-    memcpy(audio_file_path, file_path, sizeof(audio_file_path));
+    strlcpy(audio_file_path, file_path, sizeof(audio_file_path));
 
     return ESP_OK;
 }

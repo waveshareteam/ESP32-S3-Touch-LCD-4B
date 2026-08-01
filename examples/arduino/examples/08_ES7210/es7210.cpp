@@ -322,7 +322,7 @@ esp_err_t es7210_adc_init(TwoWire *tw,  audio_hal_codec_config_t *codec_cfg)
     ret |= es7210_config_sample(i2s_cfg->samples);
     ret |= es7210_mic_select(mic_select);
     ret |= es7210_adc_set_gain_all(GAIN_0DB);
-    return ESP_OK;
+    return ret;
 }
 
 esp_err_t es7210_adc_deinit()
@@ -431,20 +431,20 @@ esp_err_t es7210_adc_ctrl_state(audio_hal_codec_mode_t mode, audio_hal_ctrl_t ct
 {
     static uint8_t regv;
     esp_err_t ret = ESP_OK;
+    int clock_reg_value;
     // ESP_LOGW(TAG, "ES7210 only supports ADC mode");
-    ret = es7210_read_reg(ES7210_CLOCK_OFF_REG01);
-    if ((ret != 0x7f) && (ret != 0xff)) {
-        regv = es7210_read_reg(ES7210_CLOCK_OFF_REG01);
+    clock_reg_value = es7210_read_reg(ES7210_CLOCK_OFF_REG01);
+    if ((clock_reg_value != 0x7f) && (clock_reg_value != 0xff)) {
+        regv = (uint8_t)clock_reg_value;
     }
     if (ctrl_state == AUDIO_HAL_CTRL_START) {
         ESP_LOGI(TAG, "The ES7210_CLOCK_OFF_REG01 value before stop is %x",regv);
         ret |= es7210_start(regv);
     } else {
         ESP_LOGW(TAG, "The codec is about to stop");
-        regv = es7210_read_reg(ES7210_CLOCK_OFF_REG01);
         ret |= es7210_stop();
     }
-    return ESP_OK;
+    return ret;
 }
 
 esp_err_t es7210_adc_set_gain(es7210_input_mics_t mic_mask, es7210_gain_value_t gain)

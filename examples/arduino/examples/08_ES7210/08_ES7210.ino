@@ -57,6 +57,11 @@ void setup() {
     (es7210_gain_value_t)GAIN_37_5DB);
   ret_val |= es7210_adc_ctrl_state(cfg.codec_mode, AUDIO_HAL_CTRL_START);
 
+  if (ret_val != ESP_OK) {
+    Serial.printf("ES7210 initialization failed: 0x%08lx\r\n", (unsigned long)ret_val);
+    return;
+  }
+
 
 
   i2s_config_t i2s_config = {
