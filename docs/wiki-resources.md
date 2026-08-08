@@ -1,5 +1,7 @@
 # Waveshare Wiki Resources
 
+[English](wiki-resources.md) | [简体中文](wiki-resources_ZH.md)
+
 This repository imports product-specific resources from the official
 [ESP32-S3-Touch-LCD-4B Wiki page](https://www.waveshare.net/wiki/ESP32-S3-Touch-LCD-4B).
 The synchronized page revision is
@@ -28,6 +30,11 @@ Official attachment URLs:
 | `Arduino-v3.2.0/examples/*` | `examples/arduino/examples/*` | Eight first-party sketches |
 | `Arduino-v3.2.0/libraries/*` | `examples/arduino/libraries/*` | Runtime sources and licenses retained; upstream tests, docs, examples, and unrelated datasheets omitted |
 | `FirmWare/*.bin` | `firmware/*.bin` | Factory/recovery input, not a source-build CI artifact |
+
+The `07_ES8311` archive example contained an embedded PCM recording with only a
+filename/size comment and no source or license metadata. It is not
+redistributed; the normalized sketch generates a low-amplitude test tone at
+runtime instead. Driver sources and their license headers are retained.
 
 The archive contained 5,756 ZIP entries and 5,116 files after extraction,
 with 341,818,010 uncompressed bytes. It had no absolute paths, parent-directory
@@ -64,5 +71,6 @@ bundle, but are not treated as first-party product examples.
 - The schematic PDF contains two nonblank pages: the electrical schematic and
   a component-placement/board-outline page.
 - Downloaded image sizes and SHA-1 values were obtained from the MediaWiki API.
-- No claim of full GPIO or electrical validation is made until the schematic,
-  example pin definitions, and physical hardware revision are cross-checked.
+- Active example pin definitions were cross-checked against the schematic and
+  managed BSP; see [the pin audit](../hardware/pin-audit.md). Electrical and
+  physical-board revision validation is still pending.

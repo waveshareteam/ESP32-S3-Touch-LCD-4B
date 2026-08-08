@@ -1,9 +1,11 @@
 # ESP-IDF Examples
 
+[English](README.md) | [简体中文](README_ZH.md)
+
 These five first-party projects were imported from the official Waveshare Demo
 archive linked in `docs/wiki-resources.md`. The archive directory was named
-`ESP-IDF-v5.4.2`; this is the source baseline, not a claim of compatibility
-with newer ESP-IDF releases.
+`ESP-IDF-v5.4.2`; this is the source baseline. CI currently validates every
+project with ESP-IDF v5.5.5 and v6.0.2.
 
 | Project | Feature |
 | --- | --- |
@@ -25,6 +27,6 @@ idf.py -C examples/esp-idf/01_AXP2101 set-target esp32s3 build
 
 Generated `sdkconfig`, `sdkconfig.old`, and `.clangd` files from the archive
 were intentionally excluded. Project `sdkconfig.defaults`, partitions, source
-assets, and local components were retained. The imported projects have not yet
-been build-validated as a complete set or migrated against the repository's
-future v5.5/v6 CI matrix; see `docs/ci.md`.
+assets, and local components were retained. Direct managed-component versions
+are fixed in project manifests; CI-generated dependency locks are included in
+firmware artifacts. See [CI Coverage](../../docs/ci.md).

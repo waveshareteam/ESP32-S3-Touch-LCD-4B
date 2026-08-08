@@ -1,5 +1,7 @@
 # Immersive Block Example
 
+[English](README.md) | [简体中文](README_ZH.md)
+
 This ESP32-S3 example uses the QMI8658 accelerometer and LVGL to move colored
 shapes on the ESP32-S3-Touch-LCD-4B display as the board is tilted. At startup,
 keep the board level while the sensor calibration runs. The BOOT button can
@@ -9,11 +11,11 @@ request recalibration.
 
 - ESP32-S3-Touch-LCD-4B
 - ESP-IDF `>=5.5.0`, as declared by `main/idf_component.yml`
-- Waveshare `esp32_s3_touch_lcd_4b` and `qmi8658` managed components
-- LVGL 9.2 or a compatible 9.x release
+- Waveshare `esp32_s3_touch_lcd_4b` 2.0.0 and `qmi8658` 2.0.0 managed components
+- LVGL 9.5.0
 
-The project was imported from the official Demo archive. It has not yet been
-build-validated in this repository.
+CI validates the project with ESP-IDF v5.5.5 and v6.0.2. Runtime calibration,
+display, and sensor behavior still require physical-board validation.
 
 ## Build
 

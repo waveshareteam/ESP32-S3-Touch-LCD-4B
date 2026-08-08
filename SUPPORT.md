@@ -1,5 +1,7 @@
 # Support
 
+[English](SUPPORT.md) | [简体中文](SUPPORT_ZH.md)
+
 ## Repository Issues
 
 Use GitHub Issues for reproducible problems with files maintained in this

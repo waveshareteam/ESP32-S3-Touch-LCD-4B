@@ -1,5 +1,7 @@
 # Firmware
 
+[English](README.md) | [简体中文](README_ZH.md)
+
 This directory contains the factory image imported from the official Waveshare
 Demo archive.
 

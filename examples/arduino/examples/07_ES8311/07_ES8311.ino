@@ -6,20 +6,24 @@
 
 #include "esp_check.h"
 #include "es8311.h"
-#include "canon.h"
 
 I2SClass i2s;
 #define EXAMPLE_SAMPLE_RATE 16000
 #define EXAMPLE_VOICE_VOLUME 90
 #define EXAMPLE_MIC_GAIN (es8311_mic_gain_t)(3)
+#define TEST_TONE_HZ 440
+#define TEST_TONE_AMPLITUDE 2000
+#define TEST_TONE_FRAME_SAMPLES 256
+
+static int16_t test_tone_pcm[TEST_TONE_FRAME_SAMPLES * 2];
 
 Arduino_XCA9554SWSPI *expander = new Arduino_XCA9554SWSPI(
-  7,
-  0,
-  2,
-  1,
+  BOARD_EXPANDER_LCD_RST,
+  BOARD_EXPANDER_LCD_CS,
+  BOARD_EXPANDER_LCD_SCL,
+  BOARD_EXPANDER_LCD_SDA,
   &Wire,
-  0x20);
+  BOARD_EXPANDER_ADDRESS);
 
 esp_err_t es8311_codec_init(void) {
   es8311_handle_t es_handle = es8311_create(0, ES8311_ADDRRES_0);
@@ -53,18 +57,26 @@ void audio_task(void *param) {
     vTaskDelete(NULL);
   }
 
+  uint32_t phase = 0;
+  const uint32_t phase_step = (uint32_t)(((uint64_t)TEST_TONE_HZ << 32) / EXAMPLE_SAMPLE_RATE);
   while (1) {
-    i2s.write((uint8_t *)canon_pcm, canon_pcm_len);
+    for (size_t i = 0; i < TEST_TONE_FRAME_SAMPLES; ++i) {
+      phase += phase_step;
+      int16_t sample = (phase & 0x80000000U) ? TEST_TONE_AMPLITUDE : -TEST_TONE_AMPLITUDE;
+      test_tone_pcm[i * 2] = sample;
+      test_tone_pcm[i * 2 + 1] = sample;
+    }
+    i2s.write((uint8_t *)test_tone_pcm, sizeof(test_tone_pcm));
     vTaskDelay(1);
   }
 }
 
 void setup() {
   Serial.begin(115200);
-  Wire.begin(47, 48);
+  Wire.begin(BOARD_I2C_SDA, BOARD_I2C_SCL);
 
-  expander->pinMode(3, OUTPUT);
-  expander->digitalWrite(3, HIGH);
+  expander->pinMode(BOARD_EXPANDER_AMP_CTRL, OUTPUT);
+  expander->digitalWrite(BOARD_EXPANDER_AMP_CTRL, HIGH);
   delay(200);
 
   xTaskCreatePinnedToCore(audio_task, "audio_task", 4096, NULL, 1, NULL, 1);

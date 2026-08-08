@@ -1,5 +1,7 @@
 # Schematics
 
+[English](README.md) | [简体中文](README_ZH.md)
+
 ## ESP32-S3-Touch-LCD-4B
 
 | Item | Value |
@@ -15,6 +17,7 @@ component-placement/board-outline drawing. Both pages were rendered and
 checked as nonblank.
 
 The Wiki attachment does not identify an editable EDA source or a distinct
-hardware revision in its filename. Do not infer either value. The PDF has not
-yet been cross-checked against every pin definition in the imported examples
-or against a physical board revision.
+hardware revision in its filename. Do not infer either value. The active
+example pins have been cross-checked in [the pin audit](../pin-audit.md). The
+PDF has not been matched to a named physical-board revision or electrically
+validated.

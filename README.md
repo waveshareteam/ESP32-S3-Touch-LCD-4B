@@ -1,27 +1,32 @@
 <div align="center">
 
-# ESP32-S3-Touch-LCD-4B
+<h1>ESP32-S3-Touch-LCD-4B</h1>
 
-### ESP32-S3 4-inch 480 × 480 RGB LCD touch development board
+<strong>ESP32-S3 4-inch 480 × 480 RGB LCD touch development board</strong>
 
-[![Build Examples](https://github.com/waveshareteam/ESP32-S3-Touch-LCD-4B/actions/workflows/examples.yml/badge.svg)](https://github.com/waveshareteam/ESP32-S3-Touch-LCD-4B/actions/workflows/examples.yml)
-[![Repository Checks](https://github.com/waveshareteam/ESP32-S3-Touch-LCD-4B/actions/workflows/repository-checks.yml/badge.svg)](https://github.com/waveshareteam/ESP32-S3-Touch-LCD-4B/actions/workflows/repository-checks.yml)
-[![License](https://img.shields.io/github/license/waveshareteam/ESP32-S3-Touch-LCD-4B)](LICENSE.txt)
+<p>
+  <a href="https://github.com/waveshareteam/ESP32-S3-Touch-LCD-4B/actions/workflows/examples.yml"><img src="https://github.com/waveshareteam/ESP32-S3-Touch-LCD-4B/actions/workflows/examples.yml/badge.svg" alt="Build Examples"></a>
+  <a href="https://github.com/waveshareteam/ESP32-S3-Touch-LCD-4B/actions/workflows/repository-checks.yml"><img src="https://github.com/waveshareteam/ESP32-S3-Touch-LCD-4B/actions/workflows/repository-checks.yml/badge.svg" alt="Repository Checks"></a>
+  <a href="LICENSE.txt"><img src="https://img.shields.io/github/license/waveshareteam/ESP32-S3-Touch-LCD-4B" alt="License"></a>
+</p>
 
-[English](README.md) | [简体中文](README_CN.md)
+<p><a href="README.md">English</a> | <a href="README_ZH.md">简体中文</a></p>
 
-[Product Page](https://www.waveshare.com/esp32-s3-touch-lcd-4b.htm) ·
-[Waveshare Wiki](https://www.waveshare.com/wiki/ESP32-S3-Touch-LCD-4B) ·
-[CI Firmware Artifacts](https://github.com/waveshareteam/ESP32-S3-Touch-LCD-4B/actions/workflows/examples.yml) ·
-[ESP-IDF Examples](examples/esp-idf/) ·
-[Arduino Examples](examples/arduino/) ·
-[Documentation](docs/)
+<p>
+  <a href="https://www.waveshare.com/esp32-s3-touch-lcd-4b.htm">🌐 Product Page</a> ·
+  <a href="examples/esp-idf/">🧩 ESP-IDF Examples</a> ·
+  <a href="examples/arduino/">🔧 Arduino Examples</a> ·
+  <a href="firmware/">📦 Firmware</a> ·
+  <a href="docs/">📚 Documentation</a>
+</p>
 
-![ESP32-S3-Touch-LCD-4B](docs/assets/wiki/ESP32-S3-Touch-LCD-4B-inter001.jpg)
+<img src="docs/assets/wiki/ESP32-S3-Touch-LCD-4B-inter001.jpg" alt="ESP32-S3-Touch-LCD-4B">
 
 </div>
 
-## Overview
+---
+
+## ✨ Overview
 
 ESP32-S3-Touch-LCD-4B is a Waveshare smart control panel development board
 built around the ESP32-S3-WROOM-1-N16R8 module. It combines a 4-inch
@@ -38,7 +43,7 @@ Product resources were synchronized from the official
 The [resource manifest](docs/wiki-resources.md) records source URLs, import
 mapping, file sizes, checksums, and redistribution notes.
 
-## Hardware Overview
+## 🖥️ Hardware Overview
 
 | Feature | Specification |
 | --- | --- |
@@ -54,17 +59,19 @@ mapping, file sizes, checksums, and redistribution notes.
 | Board support | ESP-IDF managed component `waveshare/esp32_s3_touch_lcd_4b` |
 | Hardware files | [Schematic and hardware notes](hardware/) |
 
-The public schematic and example code are included, but a complete
-pin-by-pin audit against every hardware revision is still in progress.
-Treat passing builds as compile and packaging validation, not proof of
-operation on physical hardware.
+The active example pin definitions have been cross-checked against the public
+two-page schematic and the Waveshare managed BSP. See the
+[pin audit](hardware/pin-audit.md) for the evidence and remaining limits.
+Physical-board and hardware-revision validation is still pending, so passing
+builds remain compile and packaging evidence rather than proof of operation.
 
-## CI Firmware Artifacts
+## 📦 CI Firmware Artifacts
 
 The [Build Examples](https://github.com/waveshareteam/ESP32-S3-Touch-LCD-4B/actions/workflows/examples.yml)
 workflow builds every first-party example independently. Each successful job
 uploads a flashable ZIP containing a manifest, split binaries, a combined
-binary, and platform flash scripts.
+binary, platform flash scripts, and the generated ESP-IDF dependency lock when
+one is available.
 
 To use an artifact:
 
@@ -93,7 +100,7 @@ The official factory image is maintained separately under
 [factory firmware notes](firmware/README.md) before flashing. It is not a
 source-built CI artifact.
 
-## Examples
+## 🧪 Examples
 
 ### ESP-IDF
 
@@ -128,12 +135,14 @@ toolchains:
 | ESP-IDF | v6.0.2 | 5 | 5 |
 | Arduino-ESP32 | 3.3.11 | 8 | 8 |
 
-A full run expands into 2 discovery jobs and 18 independent firmware build
-jobs. Bundled Arduino library examples are intentionally excluded. See
+A full run expands into one classifier job, 18 independent firmware build jobs,
+and one stable aggregate gate. Documentation-only changes run the classifier
+and aggregate gate without scheduling firmware builds. Bundled Arduino library
+examples are intentionally excluded. See
 [CI Coverage](docs/ci.md) for discovery rules, target configuration, and
 artifact details.
 
-## Repository Layout
+## 🗂️ Repository Layout
 
 | Path | Purpose |
 | --- | --- |
@@ -148,26 +157,28 @@ artifact details.
 See [Repository Structure](docs/repository-structure.md) for directory
 ownership and naming rules.
 
-## Documentation
+## 📚 Documentation
 
 - [Waveshare Wiki](https://www.waveshare.com/wiki/ESP32-S3-Touch-LCD-4B)
 - [Wiki Resource Manifest](docs/wiki-resources.md)
 - [Hardware Resources](hardware/README.md)
+- [Schematic-backed Pin Audit](hardware/pin-audit.md)
 - [Bring-up Checklist](docs/bring-up-checklist.md)
 - [CI Coverage](docs/ci.md)
 - [Firmware Packaging and Flashing](releases/README.md)
 - [Repository Structure](docs/repository-structure.md)
 
 The original Demo ZIP is not committed because its normalized contents are
-already stored under `examples/` and `firmware/`.
+stored under `examples/` and `firmware/`; an unattributed PCM recording was
+intentionally omitted and replaced by a generated test tone.
 
-## Contributing and Support
+## 🤝 Contributing and Support
 
 - Read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a change.
 - Use [SUPPORT.md](SUPPORT.md) to choose the correct support channel.
 - Report security issues according to [SECURITY.md](SECURITY.md).
 
-## License
+## 📄 License
 
 Unless a file states otherwise, this repository is licensed under the
 [Apache License 2.0](LICENSE.txt). Imported components, examples, documents,

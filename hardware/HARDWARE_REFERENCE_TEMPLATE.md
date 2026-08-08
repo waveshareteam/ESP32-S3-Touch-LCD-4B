@@ -1,5 +1,7 @@
 # ESP32-S3-Touch-LCD-4B Hardware Reference Template
 
+[English](HARDWARE_REFERENCE_TEMPLATE.md) | [简体中文](HARDWARE_REFERENCE_TEMPLATE_ZH.md)
+
 > Status: unverified template. Do not use this file as a pin map or product
 > specification until every field is completed from released hardware files.
 

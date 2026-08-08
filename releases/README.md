@@ -1,5 +1,7 @@
 # Release Artifacts
 
+[English](README.md) | [简体中文](README_ZH.md)
+
 `package_firmware.py` converts a successful ESP-IDF or Arduino build into a
 flashable ZIP. Generated archives belong in `releases/dist/`,
 `release-artifacts/`, or CI artifact storage and are ignored by Git.
@@ -23,7 +25,8 @@ python3 releases/package_firmware.py \
 ```
 
 The script reads ESP-IDF's `flasher_args.json`, preserves the required source
-segments, and creates a combined image.
+segments, creates a combined image, and copies the generated
+`dependencies.lock` with a SHA-256 manifest entry when it exists.
 
 ## Arduino
 
@@ -49,7 +52,8 @@ python3 releases/package_firmware.py \
 ## Archive Contents
 
 Each archive includes `manifest.json`, `flash.sh`, `flash.bat`,
-`flash_args.txt`, the source firmware segments, and `bin/*.combined.bin`. Flash
+`flash_args.txt`, the source firmware segments, `bin/*.combined.bin`, and the
+ESP-IDF dependency lock when available. Flash
 the combined image with `flash.bat COMx` on Windows or
 `./flash.sh /dev/ttyACM0` on Linux.
 

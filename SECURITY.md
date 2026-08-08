@@ -1,5 +1,7 @@
 # Security Policy
 
+[English](SECURITY.md) | [简体中文](SECURITY_ZH.md)
+
 ## Supported Content
 
 Security updates apply to maintained source projects and documentation on the

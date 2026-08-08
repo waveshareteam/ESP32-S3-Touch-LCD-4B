@@ -4,6 +4,9 @@
 from __future__ import annotations
 
 import argparse
+import fnmatch
+import hashlib
+import json
 import re
 import sys
 from pathlib import Path
@@ -16,6 +19,7 @@ REQUIRED_FILES = (
     "LICENSE.txt",
     "README.md",
     "README_CN.md",
+    "README_ZH.md",
     "SECURITY.md",
     "SUPPORT.md",
     ".github/ISSUE_TEMPLATE/bug_report.md",
@@ -23,8 +27,11 @@ REQUIRED_FILES = (
     ".github/pull_request_template.md",
     ".github/workflows/repository-checks.yml",
     "docs/README.md",
+    "docs/wiki-resources_CN.md",
     "examples/README.md",
+    "examples/README_CN.md",
     "firmware/README.md",
+    "firmware/README_CN.md",
     "hardware/README.md",
     "releases/README.md",
     "releases/download_artifacts.py",
@@ -32,6 +39,11 @@ REQUIRED_FILES = (
     "releases/package_firmware.py",
     "scripts/check_repository.py",
     "scripts/discover_examples.py",
+    "scripts/route_examples.py",
+    "config/markdown-audit.json",
+    "tests/test_ci_routing.py",
+    "tests/test_package_firmware.py",
+    "tests/test_repository_checks.py",
 )
 
 REQUIRED_DIRECTORIES = (
@@ -42,6 +54,8 @@ REQUIRED_DIRECTORIES = (
     "hardware",
     "releases",
     "scripts",
+    "config",
+    "tests",
 )
 
 DISALLOWED_ROOT_NAMES = (
@@ -54,7 +68,7 @@ DISALLOWED_ROOT_NAMES = (
     "examples_idf",
 )
 
-PUBLIC_TEXT_SUFFIXES = {".md", ".txt", ".yaml", ".yml"}
+PUBLIC_TEXT_SUFFIXES = {".json", ".md", ".rst", ".txt", ".yaml", ".yml"}
 SKIPPED_PARTS = {
     ".codex",
     ".git",
@@ -62,13 +76,15 @@ SKIPPED_PARTS = {
     "__pycache__",
     "build",
     "components",
+    "dist",
+    "downloads",
     "libraries",
     "managed_components",
     "release-artifacts",
 }
 
 LOCAL_PATH_PATTERNS = (
-    ("Windows user path", re.compile(r"(?i)\b[A-Z]:[\\/](?:Users|Documents and Settings)[\\/]")),
+    ("Windows absolute path", re.compile(r"(?i)(?<![A-Za-z])\b[A-Z]:[\\/]")),
     ("macOS user path", re.compile(r"/Users/[^/\s]+/")),
     ("Linux user path", re.compile(r"/home/[^/\s]+/")),
     ("UNC network path", re.compile(r"\\\\[^\\\s]+\\[^\\\s]+")),
@@ -180,6 +196,7 @@ def validate_public_text(root: Path) -> list[str]:
 def validate_markdown_links(root: Path) -> list[str]:
     errors: list[str] = []
     link_pattern = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
+    uri_scheme = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
 
     for path in root.rglob("*.md"):
         if not path.is_file() or is_skipped(path, root):
@@ -191,16 +208,23 @@ def validate_markdown_links(root: Path) -> list[str]:
             errors.append(f"cannot read {relative(path, root)}: {exc}")
             continue
 
+        in_fence = False
         for line_number, line in enumerate(lines, start=1):
+            if re.match(r"^\s*(```|~~~)", line):
+                in_fence = not in_fence
+                continue
+            if in_fence:
+                continue
             for match in link_pattern.finditer(line):
                 destination = match.group(1).strip().strip("<>")
                 if (
                     not destination
-                    or destination.startswith(("#", "http://", "https://", "mailto:"))
+                    or destination.startswith(("#", "//"))
+                    or uri_scheme.match(destination)
                 ):
                     continue
 
-                destination = destination.split("#", maxsplit=1)[0]
+                destination = destination.split("#", maxsplit=1)[0].split("?", maxsplit=1)[0]
                 linked_path = (path.parent / destination).resolve()
                 try:
                     linked_path.relative_to(root)
@@ -220,12 +244,110 @@ def validate_markdown_links(root: Path) -> list[str]:
     return errors
 
 
+def load_markdown_policy(root: Path) -> tuple[dict, list[str]]:
+    path = root / "config" / "markdown-audit.json"
+    try:
+        policy = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {}, [f"cannot read Markdown audit policy: {exc}"]
+    if not isinstance(policy, dict):
+        return {}, ["config/markdown-audit.json: top-level value must be an object"]
+    patterns = policy.get("exclude_patterns", [])
+    if not isinstance(patterns, list) or not all(isinstance(item, str) for item in patterns):
+        return {}, ["config/markdown-audit.json: exclude_patterns must be a string list"]
+    return policy, []
+
+
+def validate_bilingual_markdown(root: Path, policy: dict) -> list[str]:
+    errors: list[str] = []
+    excluded = policy.get("exclude_patterns", [])
+
+    for english in root.rglob("*.md"):
+        if not english.is_file() or is_skipped(english, root):
+            continue
+        rel = relative(english, root)
+        if any(fnmatch.fnmatchcase(rel, pattern) for pattern in excluded):
+            continue
+        if english.stem.endswith(("_ZH", "_CN")):
+            continue
+
+        chinese = english.with_name(f"{english.stem}_ZH.md")
+        if not chinese.is_file():
+            errors.append(f"missing Simplified-Chinese companion: {relative(chinese, root)}")
+            continue
+
+        try:
+            english_text = english.read_text(encoding="utf-8", errors="replace")
+            chinese_text = chinese.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            errors.append(f"cannot read bilingual pair for {rel}: {exc}")
+            continue
+
+        if chinese.name not in english_text:
+            errors.append(f"{rel}: missing language link to {chinese.name}")
+        if english.name not in chinese_text:
+            errors.append(
+                f"{relative(chinese, root)}: missing language link to {english.name}"
+            )
+
+    return errors
+
+
+def validate_checksum_manifests(root: Path) -> list[str]:
+    errors: list[str] = []
+    for manifest in (
+        root / "firmware" / "checksums.sha256",
+        root / "hardware" / "schematics" / "checksums.sha256",
+    ):
+        if not manifest.is_file():
+            errors.append(f"missing checksum manifest: {relative(manifest, root)}")
+            continue
+        for line_number, raw_line in enumerate(
+            manifest.read_text(encoding="utf-8", errors="replace").splitlines(), start=1
+        ):
+            line = raw_line.strip()
+            if not line:
+                continue
+            match = re.fullmatch(r"([0-9a-fA-F]{64})\s+\*?(.+)", line)
+            if not match:
+                errors.append(
+                    f"{relative(manifest, root)}:{line_number}: invalid SHA-256 entry"
+                )
+                continue
+            expected, filename = match.groups()
+            target = (manifest.parent / filename).resolve()
+            try:
+                target.relative_to(manifest.parent.resolve())
+            except ValueError:
+                errors.append(
+                    f"{relative(manifest, root)}:{line_number}: checksum path leaves its directory"
+                )
+                continue
+            if not target.is_file():
+                errors.append(
+                    f"{relative(manifest, root)}:{line_number}: missing checksummed file: {filename}"
+                )
+                continue
+            with target.open("rb") as source:
+                actual = hashlib.file_digest(source, "sha256").hexdigest()
+            if actual.lower() != expected.lower():
+                errors.append(
+                    f"{relative(manifest, root)}:{line_number}: checksum mismatch: {filename}"
+                )
+    return errors
+
+
 def validate(root: Path) -> list[str]:
     errors: list[str] = []
+    policy, policy_errors = load_markdown_policy(root)
+    errors.extend(policy_errors)
     errors.extend(validate_required_paths(root))
     errors.extend(validate_framework_layout(root))
     errors.extend(validate_public_text(root))
     errors.extend(validate_markdown_links(root))
+    if not policy_errors:
+        errors.extend(validate_bilingual_markdown(root, policy))
+    errors.extend(validate_checksum_manifests(root))
     return errors
 
 

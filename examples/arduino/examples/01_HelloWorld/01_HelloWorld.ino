@@ -4,22 +4,22 @@
 #include <Wire.h>
 
 Arduino_XCA9554SWSPI *expander = new Arduino_XCA9554SWSPI(
-  7,
-  0,
-  2,
-  1,
+  BOARD_EXPANDER_LCD_RST,
+  BOARD_EXPANDER_LCD_CS,
+  BOARD_EXPANDER_LCD_SCL,
+  BOARD_EXPANDER_LCD_SDA,
   &Wire,
-  0x20);
+  BOARD_EXPANDER_ADDRESS);
 
 Arduino_ESP32RGBPanel *rgbpanel = new Arduino_ESP32RGBPanel(
-  17 /* DE */, 3 /* VSYNC */, 46 /* HSYNC */, 9 /* PCLK */,
-  10 /* B0 */, 11 /* B1 */, 12 /* B2 */, 13 /* B3 */, 14 /* B4 */,
-  21 /* G0 */, 8 /* G1 */, 18 /* G2 */, 45 /* G3 */, 38 /* G4 */, 39 /* G5 */,
-  40 /* R0 */, 41 /* R1 */, 42 /* R2 */, 2 /* R3 */, 1 /* R4 */,
+  BOARD_LCD_DE, BOARD_LCD_VSYNC, BOARD_LCD_HSYNC, BOARD_LCD_PCLK,
+  BOARD_LCD_R0, BOARD_LCD_R1, BOARD_LCD_R2, BOARD_LCD_R3, BOARD_LCD_R4,
+  BOARD_LCD_G0, BOARD_LCD_G1, BOARD_LCD_G2, BOARD_LCD_G3, BOARD_LCD_G4, BOARD_LCD_G5,
+  BOARD_LCD_B0, BOARD_LCD_B1, BOARD_LCD_B2, BOARD_LCD_B3, BOARD_LCD_B4,
   1 /* hsync_polarity */, 10 /* hsync_front_porch */, 8 /* hsync_pulse_width */, 50 /* hsync_back_porch */,
   1 /* vsync_polarity */, 10 /* vsync_front_porch */, 8 /* vsync_pulse_width */, 20 /* vsync_back_porch */);
 Arduino_RGB_Display *gfx = new Arduino_RGB_Display(
-  480 /* width */, 480 /* height */, rgbpanel, 0 /* rotation */, true /* auto_flush */,
+  BOARD_LCD_WIDTH /* width */, BOARD_LCD_HEIGHT /* height */, rgbpanel, 0 /* rotation */, true /* auto_flush */,
   expander, GFX_NOT_DEFINED /* RST */, st7701_type1_init_operations, sizeof(st7701_type1_init_operations));
 
 void setup(void) {
@@ -28,19 +28,19 @@ void setup(void) {
   // while(!Serial);
   Serial.println("Arduino_GFX Hello World example");
 
-  Wire.begin(47, 48);
+  Wire.begin(BOARD_I2C_SDA, BOARD_I2C_SCL);
 
 #ifdef GFX_EXTRA_PRE_INIT
   GFX_EXTRA_PRE_INIT();
 #endif
 
-  expander->pinMode(5, OUTPUT);
-  expander->pinMode(6, OUTPUT);
-  expander->digitalWrite(6, LOW);
+  expander->pinMode(BOARD_EXPANDER_TOUCH_RST, OUTPUT);
+  expander->pinMode(BOARD_EXPANDER_TOUCH_INT, OUTPUT);
+  expander->digitalWrite(BOARD_EXPANDER_TOUCH_INT, LOW);
   delay(200);
-  expander->digitalWrite(5, LOW);
+  expander->digitalWrite(BOARD_EXPANDER_TOUCH_RST, LOW);
   delay(200);
-  expander->digitalWrite(5, HIGH);
+  expander->digitalWrite(BOARD_EXPANDER_TOUCH_RST, HIGH);
   delay(200);
 
 

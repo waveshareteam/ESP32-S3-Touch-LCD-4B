@@ -1,13 +1,15 @@
 # Continuous Integration
 
+[English](ci.md) | [简体中文](ci_ZH.md)
+
 ## Workflows
 
 `Repository checks` validates the repository layout, local Markdown links, and
 public-text hygiene on every push and pull request.
 
-`Build Examples` discovers first-party demos dynamically and expands each demo
-into an independent matrix job. A full run contains two discovery jobs and 18
-firmware jobs:
+`Build Examples` classifies the changed paths, discovers first-party demos, and
+expands only the affected demos into independent matrix jobs. A full run
+contains one classifier, 18 firmware jobs, and one stable aggregate gate:
 
 | Surface | Versions | Demos | Build jobs |
 | --- | --- | ---: | ---: |
@@ -21,6 +23,14 @@ files under `examples/arduino/examples/`; examples bundled inside
 
 Each matrix job has its own log, result, and firmware artifact. One failed demo
 does not hide or cancel the results of the other demos.
+
+The workflow runs for every pull request so its aggregate `Build examples`
+status remains visible to branch protection. Markdown, governance, hardware
+reference, and other documentation-only changes skip both firmware matrices.
+An example source change selects only that project; a bundled Arduino library
+change selects all Arduino sketches; workflow, discovery, routing, or packaging
+changes select both full matrices. Unknown non-documentation paths fail closed
+to both full matrices, while an empty diff is a hard routing error.
 
 ## Board Configuration
 
@@ -46,6 +56,8 @@ Every successful matrix job uploads one flashable ZIP named with the framework,
 demo, and framework version. Each archive contains:
 
 - `manifest.json` with build metadata and the flash command;
+- `dependencies.lock` plus its SHA-256 in the manifest for ESP-IDF builds when
+  the Component Manager generated a lock;
 - `flash.sh`, `flash.bat`, and `flash_args.txt`;
 - the source firmware segments under `bin/`; and
 - a combined firmware image that can be flashed at offset `0x0`.
@@ -66,6 +78,14 @@ complete interface.
 
 Factory and recovery binaries under `firmware/` are checked-in release inputs
 and are never uploaded as source-built CI artifacts.
+
+## Static Routing Tests
+
+`Repository checks` runs the repository validator and the synthetic routing
+suite under `tests/`. The tests cover documentation-only changes, direct IDF and
+Arduino changes, bundled libraries, release helpers, immutable firmware,
+renames, unknown paths, and empty-diff failure. These are static tests and do
+not compile firmware locally.
 
 ## Validation Boundary
 

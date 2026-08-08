@@ -1,5 +1,7 @@
 # Repository Structure
 
+[English](repository-structure.md) | [简体中文](repository-structure_ZH.md)
+
 This repository follows the normalized layout used by current Waveshare ESP32
 product repositories. Directory names are lowercase and framework versions do
 not appear in directory names.
@@ -12,7 +14,9 @@ not appear in directory names.
 | `firmware/` | Released binaries or maintained firmware source | Keep binary and source roles explicit |
 | `hardware/` | Schematics and hardware design references | Identify every board revision |
 | `releases/` | Packaging tools and generated-artifact documentation | Never commit generated archives |
-| `scripts/` | Repository maintenance utilities | Keep scripts platform-neutral where practical |
+| `scripts/` | Discovery, routing, and maintenance utilities | Keep scripts platform-neutral where practical |
+| `tests/` | Static repository and routing tests | Must not compile firmware locally |
+| `config/` | Shared audit policy | Add only maintained, repository-wide configuration |
 
 Optional roots such as `config/` and `tests/` should be created only when they
 contain shared configuration or maintained validation resources. Empty
@@ -31,8 +35,9 @@ examples/
 ```
 
 An ESP-IDF example is a complete project with a top-level `CMakeLists.txt`, a
-`main/` component, an explicit `esp32s3` target, and a README. An Arduino
-example is a sketch directory with a matching `.ino` file and a README. Bundled
+`main/` component, an explicit `esp32s3` target, and `README.md`/`README_ZH.md`.
+An Arduino example is a sketch directory with a matching `.ino` file and both
+README languages. Bundled
 library examples are not first-party product examples and must not enter the
 default product CI matrix.
 

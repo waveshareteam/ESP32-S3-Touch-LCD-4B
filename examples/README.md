@@ -1,5 +1,7 @@
 # Examples
 
+[English](README.md) | [简体中文](README_ZH.md)
+
 The official Waveshare Demo archive has been normalized into two framework
 roots:
 
@@ -18,13 +20,15 @@ components were retained from the official archive.
 
 ## Compatibility Status
 
-The imported version numbers describe the source archive, not a maintained
-compatibility range. No build claim is made yet for:
+The imported version numbers describe the source archive, not the maintained
+CI range. The current workflow validates:
 
-- ESP-IDF v5.5 or v6;
-- Arduino-ESP32 releases newer than 3.2.0; or
-- hardware behavior before the example pin definitions are cross-checked
-  against the schematic and physical board revision.
+- all five ESP-IDF projects with v5.5.5 and v6.0.2;
+- all eight first-party sketches with Arduino-ESP32 3.3.11; and
+- per-job flashable artifact packaging.
+
+Active example pins have been cross-checked against the schematic and managed
+BSP, but physical-board behavior remains outside the CI claim.
 
 See [docs/ci.md](../docs/ci.md) for the current validation boundary and
 [docs/wiki-resources.md](../docs/wiki-resources.md) for resource provenance.

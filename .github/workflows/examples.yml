@@ -7,19 +7,7 @@ on:
       - master
     tags:
       - "v*"
-    paths:
-      - ".github/workflows/examples.yml"
-      - "scripts/discover_examples.py"
-      - "releases/**"
-      - "examples/esp-idf/**"
-      - "examples/arduino/**"
   pull_request:
-    paths:
-      - ".github/workflows/examples.yml"
-      - "scripts/discover_examples.py"
-      - "releases/**"
-      - "examples/esp-idf/**"
-      - "examples/arduino/**"
   workflow_dispatch:
     inputs:
       target:
@@ -31,38 +19,56 @@ permissions:
   contents: read
 
 concurrency:
-  group: examples-${{ github.workflow }}-${{ github.ref }}
+  group: examples-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  discover-esp-idf:
-    name: Discover ESP-IDF examples
+  classify:
+    name: Classify changed files
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.discover.outputs.matrix }}
-      count: ${{ steps.discover.outputs.count }}
+      idf_matrix: ${{ steps.route.outputs.idf_matrix }}
+      idf_count: ${{ steps.route.outputs.idf_count }}
+      arduino_matrix: ${{ steps.route.outputs.arduino_matrix }}
+      arduino_count: ${{ steps.route.outputs.arduino_count }}
+      docs_only: ${{ steps.route.outputs.docs_only }}
+      firmware_changed: ${{ steps.route.outputs.firmware_changed }}
+      release_review: ${{ steps.route.outputs.release_review }}
+      route: ${{ steps.route.outputs.route }}
     steps:
       - uses: actions/checkout@v7
-      - id: discover
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - id: route
+        name: Compute build matrices
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          SELECTOR: ${{ github.event.inputs.target || 'all' }}
         run: |
-          python3 scripts/discover_examples.py \
-            --surface esp-idf \
-            --selector "${{ github.event.inputs.target || 'all' }}" \
-            --idf-versions v5.5.5,v6.0.2 \
-            --github-output "$GITHUB_OUTPUT"
+          if [[ "$EVENT_NAME" == "workflow_dispatch" || "${GITHUB_REF_TYPE:-}" == "tag" || "$BASE_SHA" =~ ^0+$ ]]; then
+            python3 scripts/route_examples.py --all --selector "$SELECTOR" --github-output "$GITHUB_OUTPUT"
+          else
+            python3 scripts/route_examples.py --base "$BASE_SHA" --head "$HEAD_SHA" --github-output "$GITHUB_OUTPUT"
+          fi
 
   build-esp-idf:
     name: ${{ matrix.idf }} / ${{ matrix.name }}
-    needs: discover-esp-idf
-    if: needs.discover-esp-idf.outputs.count != '0'
+    needs: classify
+    if: needs.classify.outputs.idf_count != '0'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     container: espressif/idf:${{ matrix.idf }}
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.discover-esp-idf.outputs.matrix) }}
+      matrix: ${{ fromJSON(needs.classify.outputs.idf_matrix) }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Build ${{ matrix.path }} with ESP-IDF ${{ matrix.idf }}
         shell: bash
         run: |
@@ -79,7 +85,7 @@ jobs:
             --name "ESP32-S3-Touch-LCD-4B-${{ matrix.name }}-${{ matrix.idf }}" \
             --framework-version "${{ matrix.idf }}" \
             --target esp32s3 \
-            --git-sha "${{ github.sha }}" \
+            --git-sha "${{ github.event.pull_request.head.sha || github.sha }}" \
             --output-dir release-artifacts
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v7
@@ -88,34 +94,19 @@ jobs:
           path: release-artifacts/*.zip
           if-no-files-found: error
 
-  discover-arduino:
-    name: Discover Arduino sketches
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.discover.outputs.matrix }}
-      count: ${{ steps.discover.outputs.count }}
-    steps:
-      - uses: actions/checkout@v7
-      - id: discover
-        run: |
-          python3 scripts/discover_examples.py \
-            --surface arduino \
-            --selector "${{ github.event.inputs.target || 'all' }}" \
-            --arduino-core 3.3.11 \
-            --fqbn "esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc,FlashSize=16M,PartitionScheme=app3M_fat9M_16MB,PSRAM=opi" \
-            --github-output "$GITHUB_OUTPUT"
-
   build-arduino:
     name: ${{ matrix.name }}
-    needs: discover-arduino
-    if: needs.discover-arduino.outputs.count != '0'
+    needs: classify
+    if: needs.classify.outputs.arduino_count != '0'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.discover-arduino.outputs.matrix) }}
+      matrix: ${{ fromJSON(needs.classify.outputs.arduino_matrix) }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Set up Arduino CLI
         uses: arduino/setup-arduino-cli@v2
         with:
@@ -152,7 +143,7 @@ jobs:
             --name "ESP32-S3-Touch-LCD-4B-${{ matrix.name }}-arduino-${{ matrix.core }}" \
             --framework-version "${{ matrix.core }}" \
             --target esp32s3 \
-            --git-sha "${{ github.sha }}" \
+            --git-sha "${{ github.event.pull_request.head.sha || github.sha }}" \
             --output-dir release-artifacts
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v7
@@ -160,3 +151,24 @@ jobs:
           name: firmware-arduino-${{ matrix.name }}-${{ matrix.core }}
           path: release-artifacts/*.zip
           if-no-files-found: error
+
+  build-examples:
+    name: Build examples
+    if: always()
+    needs:
+      - classify
+      - build-esp-idf
+      - build-arduino
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce routed build results
+        env:
+          CLASSIFY_RESULT: ${{ needs.classify.result }}
+          IDF_RESULT: ${{ needs.build-esp-idf.result }}
+          ARDUINO_RESULT: ${{ needs.build-arduino.result }}
+          ROUTE: ${{ needs.classify.outputs.route }}
+        run: |
+          test "$CLASSIFY_RESULT" = "success"
+          [[ "$IDF_RESULT" == "success" || "$IDF_RESULT" == "skipped" ]]
+          [[ "$ARDUINO_RESULT" == "success" || "$ARDUINO_RESULT" == "skipped" ]]
+          echo "Validated route: $ROUTE"

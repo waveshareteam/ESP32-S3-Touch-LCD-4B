@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import shutil
@@ -58,6 +59,17 @@ def copy_file(src: Path, firmware_dir: Path, offset: str | None = None) -> str:
     dst = firmware_dir / dst_name
     shutil.copy2(src, dst)
     return f"bin/{dst_name}"
+
+
+def copy_dependency_lock(project: Path, package_dir: Path) -> dict[str, str] | None:
+    """Copy an ESP-IDF dependency snapshot into the artifact when available."""
+    source = project / "dependencies.lock"
+    if not source.is_file():
+        return None
+    destination = package_dir / "dependencies.lock"
+    shutil.copy2(source, destination)
+    digest = hashlib.sha256(destination.read_bytes()).hexdigest()
+    return {"file": destination.name, "sha256": digest}
 
 
 def write_padding(output, size: int) -> None:
@@ -261,6 +273,7 @@ def package(args: argparse.Namespace) -> Path:
 
     if args.framework == "esp-idf":
         _command_pairs, segment_files, flasher_args = esp_idf_flash_entries(build_dir, firmware_dir)
+        dependency_lock = copy_dependency_lock(project, package_dir)
         extra_args = flasher_args.get("extra_esptool_args", {})
         chip = args.target or extra_args.get("chip") or "esp32s3"
         before = extra_args.get("before", "default_reset")
@@ -268,6 +281,7 @@ def package(args: argparse.Namespace) -> Path:
         write_flash_args = [str(item) for item in flasher_args.get("write_flash_args", [])]
     else:
         _command_pairs, segment_files = arduino_flash_entries(build_dir, firmware_dir)
+        dependency_lock = None
         chip = args.target or "esp32s3"
         before = "default_reset"
         after = "hard_reset"
@@ -289,6 +303,7 @@ def package(args: argparse.Namespace) -> Path:
         "combined_bin": combined_file,
         "files": files,
         "segments": segment_files,
+        "dependency_lock": dependency_lock,
         "flash_command": " ".join("<PORT>" if item == "$PORT" else item for item in command),
     }
     write_text(package_dir / "manifest.json", json.dumps(manifest, indent=2) + "\n")

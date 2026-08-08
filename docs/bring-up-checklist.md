@@ -1,12 +1,14 @@
 # ESP32-S3-Touch-LCD-4B Bring-up Checklist
 
+[English](bring-up-checklist.md) | [简体中文](bring-up-checklist_ZH.md)
+
 Complete this checklist for every released hardware revision. Record evidence
 in `hardware/` before publishing a value in the README, board support package,
 or example configuration.
 
 ## Source Material
 
-- [ ] Add the schematic source and a rendered PDF.
+- [x] Add the released two-page schematic PDF.
 - [ ] Add PCB source or manufacturing outputs that are intended for release.
 - [ ] Add the BOM and identify do-not-populate parts where applicable.
 - [ ] Add the mechanical drawing and connector locations where applicable.
@@ -28,22 +30,26 @@ or example configuration.
 
 ## Display and Touch
 
-- [ ] Verify LCD controller, resolution, bus, color format, and timing.
-- [ ] Verify LCD reset, chip-select, command/data, and backlight controls.
-- [ ] Verify touch controller, address, bus, interrupt, and reset signals.
-- [ ] Confirm whether display and touch reset or bus signals are actually shared.
+- [x] Cross-check the LCD controller, resolution, RGB bus, and active timing constants.
+- [x] Cross-check LCD reset, chip-select, command/data, and backlight controls.
+- [x] Cross-check the GT911 bus, interrupt, and reset signals used by the BSP/examples.
+- [x] Confirm the TCA9554-mediated LCD/touch control assignments.
 
 ## Other Peripherals
 
-- [ ] Verify audio codec, amplifier, clocks, data signals, and enable pins, if used.
-- [ ] Verify sensors, PMU, RTC, buttons, LEDs, and expansion connectors, if used.
+- [x] Cross-check ES8311/ES7210 clocks, data signals, and amplifier enable used by examples.
+- [x] Cross-check QMI8658, PMU, RTC, and GPIO0 assignments used by examples.
 - [ ] Identify GPIO conflicts and peripherals that cannot operate concurrently.
 
 ## Cross-check
 
 - [ ] Compare the schematic with the PCB source or netlist.
-- [ ] Compare hardware files with all BSP headers and managed component defaults.
-- [ ] Compare hardware files with every example and shared configuration overlay.
+- [x] Compare active pin definitions with the managed BSP header.
+- [x] Compare active pin definitions with all first-party examples and the shared Arduino header.
 - [ ] Test the affected revision on physical hardware.
 - [ ] Update `hardware/HARDWARE_REFERENCE_TEMPLATE.md` and rename it to a
       revision-specific reference when verification is complete.
+
+Completed cross-checks and unresolved evidence are recorded in
+[the pin audit](../hardware/pin-audit.md). Checked items above mean a source
+cross-check, not electrical or physical-board validation.

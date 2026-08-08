@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <cstdlib>
 #include <cstring>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -12,8 +13,10 @@
 #define TAG "main"
 
 // PMU interrupt and I2C config
+#if CONFIG_PMU_INTERRUPT_PIN >= 0
 #define PMU_INPUT_PIN (gpio_num_t) CONFIG_PMU_INTERRUPT_PIN
-#define PMU_INPUT_PIN_SEL (1ULL << PMU_INPUT_PIN)
+#define PMU_INPUT_PIN_SEL (1ULL << CONFIG_PMU_INTERRUPT_PIN)
+#endif
 
 #define I2C_MASTER_NUM (i2c_port_num_t) CONFIG_I2C_MASTER_PORT_NUM
 #define I2C_MASTER_FREQ_HZ CONFIG_I2C_MASTER_FREQUENCY
@@ -51,7 +54,11 @@ esp_err_t i2c_init() {
         }
     };
 
-    i2c_new_master_bus(&bus_config, &i2c_bus_handle);
+    esp_err_t ret = i2c_new_master_bus(&bus_config, &i2c_bus_handle);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to create I2C master bus: %s", esp_err_to_name(ret));
+        return ret;
+    }
 
     i2c_device_config_t dev_config = {
         .dev_addr_length = I2C_ADDR_BIT_LEN_7,
@@ -63,7 +70,13 @@ esp_err_t i2c_init() {
         }
     };
 
-    i2c_master_bus_add_device(i2c_bus_handle, &dev_config, &pmu_dev_handle);
+    ret = i2c_master_bus_add_device(i2c_bus_handle, &dev_config, &pmu_dev_handle);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to add AXP2101 I2C device: %s", esp_err_to_name(ret));
+        i2c_del_master_bus(i2c_bus_handle);
+        i2c_bus_handle = NULL;
+        return ret;
+    }
 
     return ESP_OK;
 }
@@ -80,13 +93,13 @@ int pmu_register_read(uint8_t devAddr, uint8_t regAddr, uint8_t *data, uint8_t l
 
 // PMU write function using new API
 int pmu_register_write_byte(uint8_t devAddr, uint8_t regAddr, uint8_t *data, uint8_t len) {
-    uint8_t *buffer = (uint8_t *)malloc(len + 1);
+    uint8_t *buffer = (uint8_t *)std::malloc(len + 1);
     if (!buffer) return -1;
     buffer[0] = regAddr;
     memcpy(&buffer[1], data, len);
 
     esp_err_t ret = i2c_master_transmit(pmu_dev_handle, buffer, len + 1, I2C_MASTER_TIMEOUT_MS);
-    free(buffer);
+    std::free(buffer);
 
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "PMU WRITE FAILED!");

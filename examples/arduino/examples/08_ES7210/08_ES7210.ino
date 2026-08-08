@@ -16,22 +16,22 @@ vad_handle_t vad_inst;
 size_t bytes_read;
 
 Arduino_XCA9554SWSPI *expander = new Arduino_XCA9554SWSPI(
-  7,
-  0,
-  2,
-  1,
+  BOARD_EXPANDER_LCD_RST,
+  BOARD_EXPANDER_LCD_CS,
+  BOARD_EXPANDER_LCD_SCL,
+  BOARD_EXPANDER_LCD_SDA,
   &Wire,
-  0x20);
+  BOARD_EXPANDER_ADDRESS);
 
 void setup() {
 
   Serial.begin(115200);
   Serial.printf("psram size : %d kb\r\n", ESP.getPsramSize() / 1024);
   Serial.printf("FLASH size : %d kb\r\n", ESP.getFlashChipSize() / 1024);
-  Wire.begin(47, 48);
+  Wire.begin(BOARD_I2C_SDA, BOARD_I2C_SCL);
 
-  expander->pinMode(3, OUTPUT);
-  expander->digitalWrite(3, HIGH);
+  expander->pinMode(BOARD_EXPANDER_AMP_CTRL, OUTPUT);
+  expander->digitalWrite(BOARD_EXPANDER_AMP_CTRL, HIGH);
   delay(200);
 
   uint32_t ret_val = ESP_OK;

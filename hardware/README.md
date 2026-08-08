@@ -1,5 +1,7 @@
 # Hardware
 
+[English](README.md) | [简体中文](README_ZH.md)
+
 This directory is the source of truth for board-specific electrical and
 mechanical information.
 
@@ -8,6 +10,7 @@ mechanical information.
 | Resource | Status |
 | --- | --- |
 | [Schematic PDF](schematics/ESP32-S3-Touch-LCD-4B.pdf) | Official two-page PDF imported from the product Wiki |
+| [Pin audit](pin-audit.md) | Active example pins cross-checked against the PDF and managed BSP |
 | Editable schematic source | Not included in the synchronized Wiki resources |
 | PCB/BOM/manufacturing files | Not included in the synchronized Wiki resources |
 
@@ -18,11 +21,12 @@ recorded in [docs/wiki-resources.md](../docs/wiki-resources.md).
 
 ## Validation Boundary
 
-The PDF was checked for page count and visible content, but the schematic,
-example pin definitions, BSP code, and physical hardware revision have not yet
-been cross-checked pin by pin. Use
-[HARDWARE_REFERENCE_TEMPLATE.md](HARDWARE_REFERENCE_TEMPLATE.md) for that
-audit before publishing a verified board revision reference.
+The active example pin definitions were cross-checked against the schematic and
+managed BSP. The PDF is not revision-qualified, editable design files are not
+available here, and physical-board testing remains open. Read
+[pin-audit.md](pin-audit.md) before treating a value as verified, and use
+[HARDWARE_REFERENCE_TEMPLATE.md](HARDWARE_REFERENCE_TEMPLATE.md) before
+publishing a revision-specific reference.
 
 Third-party datasheets may have redistribution restrictions. Prefer links to
 the component manufacturer's canonical source when redistribution permission

@@ -1,5 +1,7 @@
 # Wiki Images
 
+[English](README.md) | [简体中文](README_ZH.md)
+
 These 20 files are original-resolution product images referenced by the
 [Waveshare Wiki page](https://www.waveshare.net/wiki/ESP32-S3-Touch-LCD-4B)
 at revision 137986 and retrieved through the MediaWiki API on 2026-07-28.

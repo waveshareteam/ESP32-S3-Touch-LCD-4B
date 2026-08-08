@@ -3,6 +3,6 @@ dependencies:
   ## Required IDF version
   idf: ">=5.1.0"
   espressif/esp_lvgl_port:
-    version: "^2"
+    version: "2.8.0~1"
   espressif/esp-brookesia: "0.4.2"
   lvgl/lvgl: "8.4.0"
