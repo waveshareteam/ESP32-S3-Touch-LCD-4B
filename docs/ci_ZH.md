@@ -26,7 +26,8 @@ Arduino 库源码选择全部 Arduino 草图；工作流、发现、路由或打
 
 ## 板卡配置
 
-ESP-IDF 目标为 `esp32s3`。Arduino 使用随包库和以下配置：
+ESP-IDF 目标为 `esp32s3`。Arduino 使用随包库和以下配置。Arduino CLI 固定为
+`1.5.1`；CI 从官方发布下载 Linux 压缩包，核对发布方 SHA-256 后才加入 `PATH`：
 
 ```text
 esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc,FlashSize=16M,PartitionScheme=app3M_fat9M_16MB,PSRAM=opi

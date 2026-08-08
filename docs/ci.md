@@ -35,7 +35,9 @@ to both full matrices, while an empty diff is a hard routing error.
 ## Board Configuration
 
 ESP-IDF builds target `esp32s3`. Arduino builds use the bundled libraries and
-the board configuration below:
+the board configuration below. Arduino CLI is pinned to `1.5.1`; CI downloads
+the official Linux release archive and verifies its published SHA-256 before
+adding the tool to `PATH`.
 
 ```text
 esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc,FlashSize=16M,PartitionScheme=app3M_fat9M_16MB,PSRAM=opi
