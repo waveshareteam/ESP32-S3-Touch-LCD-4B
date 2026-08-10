@@ -20,7 +20,7 @@
   <a href="docs/">📚 Documentation</a>
 </p>
 
-<img src="docs/assets/wiki/ESP32-S3-Touch-LCD-4B-inter001.jpg" alt="ESP32-S3-Touch-LCD-4B">
+<img src="docs/assets/wiki/ESP32-S3-Touch-LCD-4B-inter001.jpg" width="800" alt="ESP32-S3-Touch-LCD-4B development board with 4-inch touch display">
 
 </div>
 

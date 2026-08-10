@@ -293,6 +293,177 @@ def validate_bilingual_markdown(root: Path, policy: dict) -> list[str]:
     return errors
 
 
+def validate_homepage_policy(root: Path, policy: dict) -> list[str]:
+    """Check the configured homepage visual contract; this is not a full Markdown audit."""
+    errors: list[str] = []
+    pairs = policy.get("homepage_pairs")
+    if not isinstance(pairs, list):
+        return ["config/markdown-audit.json: homepage_pairs must be a list"]
+    if not pairs:
+        return ["config/markdown-audit.json: homepage_pairs must not be empty"]
+
+    resolved_root = root.resolve()
+
+    required_component_names = {
+        "centered_header",
+        "html_h1",
+        "subtitle",
+        "badges",
+        "language_switch",
+        "quick_links",
+        "hero_image",
+        "separator",
+        "h2",
+    }
+    quick_link_icons = {
+        "product": "🌐",
+        "documentation": "📚",
+        "firmware": "📦",
+        "quick_start": "🚀",
+        "esp_idf": "🧩",
+        "arduino": "🔧",
+    }
+    badge_patterns = {
+        "build": re.compile(r'<img\b[^>]*src=["\'][^"\']*/actions/workflows/[^"\']*badge\.svg[^"\']*["\']', re.I),
+        "release": re.compile(r'<img\b[^>]*src=["\'][^"\']*release[^"\']*["\']', re.I),
+        "license": re.compile(r'<img\b[^>]*src=["\'][^"\']*license[^"\']*["\']', re.I),
+    }
+
+    for index, pair in enumerate(pairs, start=1):
+        prefix = f"config/markdown-audit.json: homepage_pairs[{index - 1}]"
+        if not isinstance(pair, dict):
+            errors.append(f"{prefix} must be an object")
+            continue
+
+        values: dict[str, list[str] | str] = {}
+        invalid = False
+        for name in ("english", "chinese"):
+            value = pair.get(name)
+            if not isinstance(value, str) or not value:
+                errors.append(f"{prefix}.{name} must be a non-empty string")
+                invalid = True
+            else:
+                values[name] = value
+        for name in ("required_components", "required_quick_links", "required_badges", "required_h2_icons"):
+            value = pair.get(name)
+            if not isinstance(value, list) or not all(isinstance(item, str) and item for item in value):
+                errors.append(f"{prefix}.{name} must be a string list")
+                invalid = True
+            else:
+                values[name] = value
+        profile = pair.get("profile")
+        if profile is not None and not isinstance(profile, str):
+            errors.append(f"{prefix}.profile must be a string")
+            invalid = True
+        if invalid:
+            continue
+
+        components = values["required_components"]
+        assert isinstance(components, list)
+        unknown_components = sorted(set(components) - required_component_names)
+        if unknown_components:
+            errors.append(f"{prefix}.required_components contains unknown component(s): {', '.join(unknown_components)}")
+            continue
+        quick_links = values["required_quick_links"]
+        badges = values["required_badges"]
+        h2_icons = values["required_h2_icons"]
+        assert isinstance(quick_links, list) and isinstance(badges, list) and isinstance(h2_icons, list)
+        unknown_quick_links = sorted(set(quick_links) - quick_link_icons.keys())
+        if unknown_quick_links:
+            errors.append(f"{prefix}.required_quick_links contains unknown key(s): {', '.join(unknown_quick_links)}")
+            continue
+        unknown_badges = sorted(set(badges) - badge_patterns.keys())
+        if unknown_badges:
+            errors.append(f"{prefix}.required_badges contains unknown key(s): {', '.join(unknown_badges)}")
+            continue
+        if profile == "single-product":
+            missing_components = sorted(required_component_names - set(components))
+            if missing_components:
+                errors.append(
+                    f"{prefix}.required_components is missing single-product requirement(s): "
+                    f"{', '.join(missing_components)}"
+                )
+            if "product" not in quick_links:
+                errors.append(f"{prefix}.required_quick_links is missing single-product requirement: product")
+            if not h2_icons:
+                errors.append(f"{prefix}.required_h2_icons must not be empty for single-product")
+            if missing_components or "product" not in quick_links or not h2_icons:
+                continue
+
+        english = (resolved_root / values["english"]).resolve()
+        chinese = (resolved_root / values["chinese"]).resolve()
+        assert isinstance(english, Path) and isinstance(chinese, Path)
+        pages: list[tuple[str, Path, str]] = []
+        for language, path in (("english", english), ("chinese", chinese)):
+            try:
+                path.relative_to(resolved_root)
+            except ValueError:
+                errors.append(f"{prefix}.{language} leaves repository: {values[language]}")
+                continue
+            if not path.is_file():
+                errors.append(f"{prefix}: missing {language} homepage: {values[language]}")
+                continue
+            try:
+                pages.append((language, path, path.read_text(encoding="utf-8")))
+            except OSError as exc:
+                errors.append(f"cannot read homepage {values[language]}: {exc}")
+
+        observed_h2_icons: dict[str, list[str]] = {}
+        for language, path, text in pages:
+            rel = relative(path, resolved_root)
+            header = text.split("\n---", maxsplit=1)[0]
+            if "centered_header" in components and not re.search(r'<div\s+align=["\']center["\']\s*>', header, re.I):
+                errors.append(f"{rel}: missing centered header")
+            if "html_h1" in components and not re.search(r'^\s*<h1>[^<]+</h1>\s*$', header, re.M):
+                errors.append(f"{rel}: missing plain HTML h1")
+            if "subtitle" in components and not re.search(r'<strong>\s*\S[\s\S]*?</strong>', header):
+                errors.append(f"{rel}: missing subtitle")
+            if "language_switch" in components:
+                if not all(f'href="{item.name}"' in header or f"href='{item.name}'" in header for item in (english, chinese)):
+                    errors.append(f"{rel}: missing reciprocal language switch")
+            if "quick_links" in components:
+                for key in quick_links:
+                    icon = quick_link_icons[key]
+                    if not re.search(r'<a\b[^>]*href=["\'][^"\']+?["\'][^>]*>\s*' + re.escape(icon), header):
+                        errors.append(f"{rel}: missing {key} quick link")
+            if "badges" in components:
+                for badge in badges:
+                    if not badge_patterns[badge].search(header):
+                        errors.append(f"{rel}: missing {badge} badge")
+            if "hero_image" in components:
+                hero_images = list(re.finditer(r'<img\b(?=[^>]*\bsrc=["\']([^"\']+)["\'])(?=[^>]*\balt=["\']([^"\']*\S[^"\']*)["\'])[^>]*>', header, re.I))
+                local_heroes = []
+                for image in hero_images:
+                    source = image.group(1)
+                    if re.match(r'^[A-Za-z][A-Za-z0-9+.-]*:', source) or source.startswith("//"):
+                        continue
+                    candidate = (path.parent / source).resolve()
+                    try:
+                        candidate.relative_to(root)
+                    except ValueError:
+                        errors.append(f"{rel}: hero image leaves repository: {source}")
+                        continue
+                    if not candidate.is_file():
+                        errors.append(f"{rel}: missing hero image: {source}")
+                        continue
+                    local_heroes.append(candidate)
+                if not local_heroes and not any("hero image" in error and rel in error for error in errors):
+                    errors.append(f"{rel}: missing local hero image with non-empty alt text")
+            if "separator" in components and not re.search(r'^---\s*$', text, re.M):
+                errors.append(f"{rel}: missing header separator")
+            if "h2" in components:
+                icons = re.findall(r'^##\s+([^\s]+)', text, re.M)
+                observed_h2_icons[language] = icons
+                if icons != h2_icons:
+                    errors.append(f"{rel}: H2 icon sequence does not match policy")
+
+        if "h2" in components and len(observed_h2_icons) == 2:
+            if observed_h2_icons["english"] != observed_h2_icons["chinese"]:
+                errors.append("homepage pairs: English and Chinese H2 icon sequences differ")
+
+    return errors
+
+
 def validate_checksum_manifests(root: Path) -> list[str]:
     errors: list[str] = []
     for manifest in (
@@ -347,6 +518,7 @@ def validate(root: Path) -> list[str]:
     errors.extend(validate_markdown_links(root))
     if not policy_errors:
         errors.extend(validate_bilingual_markdown(root, policy))
+        errors.extend(validate_homepage_policy(root, policy))
     errors.extend(validate_checksum_manifests(root))
     return errors
 
