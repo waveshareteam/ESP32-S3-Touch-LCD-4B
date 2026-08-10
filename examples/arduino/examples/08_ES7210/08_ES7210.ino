@@ -14,6 +14,7 @@
 int16_t *vad_buff;
 vad_handle_t vad_inst;
 size_t bytes_read;
+bool audio_ready = false;
 
 Arduino_XCA9554SWSPI *expander = new Arduino_XCA9554SWSPI(
   BOARD_EXPANDER_LCD_RST,
@@ -86,24 +87,57 @@ void setup() {
   pin_config.ws_io_num = PIN_ES7210_LRCK;
   pin_config.data_in_num = PIN_ES7210_DIN;
   pin_config.mck_io_num = PIN_ES7210_MCLK;
-  i2s_driver_install(I2S_CH, &i2s_config, 0, NULL);
-  i2s_set_pin(I2S_CH, &pin_config);
-  i2s_zero_dma_buffer(I2S_CH);
+  esp_err_t ret = i2s_driver_install(I2S_CH, &i2s_config, 0, NULL);
+  if (ret != ESP_OK) {
+    Serial.printf("I2S driver installation failed: %s\r\n", esp_err_to_name(ret));
+    return;
+  }
+  ret = i2s_set_pin(I2S_CH, &pin_config);
+  if (ret != ESP_OK) {
+    Serial.printf("I2S pin configuration failed: %s\r\n", esp_err_to_name(ret));
+    i2s_driver_uninstall(I2S_CH);
+    return;
+  }
+  ret = i2s_zero_dma_buffer(I2S_CH);
+  if (ret != ESP_OK) {
+    Serial.printf("I2S DMA buffer reset failed: %s\r\n", esp_err_to_name(ret));
+    i2s_driver_uninstall(I2S_CH);
+    return;
+  }
   // i2s_start(I2S_NUM_1);
 
-
-  vad_inst = vad_create(VAD_MODE_0);
   vad_buff = (int16_t *)malloc(VAD_BUFFER_LENGTH * sizeof(short));
   if (vad_buff == NULL) {
-    while (1) {
-      Serial.println("Memory allocation failed!");
-      delay(1000);
-    }
+    Serial.println("VAD buffer allocation failed!");
+    i2s_driver_uninstall(I2S_CH);
+    return;
   }
+
+  vad_inst = vad_create(VAD_MODE_0);
+  if (vad_inst == NULL) {
+    Serial.println("VAD initialization failed!");
+    free(vad_buff);
+    vad_buff = NULL;
+    i2s_driver_uninstall(I2S_CH);
+    return;
+  }
+
+  audio_ready = true;
 }
 
 void loop() {
-  i2s_read(I2S_CH, (char *)vad_buff, VAD_BUFFER_LENGTH * sizeof(short), &bytes_read, portMAX_DELAY);
+  if (!audio_ready) {
+    delay(1000);
+    return;
+  }
+
+  esp_err_t ret = i2s_read(I2S_CH, (char *)vad_buff, VAD_BUFFER_LENGTH * sizeof(short), &bytes_read, portMAX_DELAY);
+  if (ret != ESP_OK || bytes_read != VAD_BUFFER_LENGTH * sizeof(short)) {
+    Serial.printf("I2S read failed: %s, bytes: %u\r\n", esp_err_to_name(ret), (unsigned int)bytes_read);
+    delay(5);
+    return;
+  }
+
   // Feed samples to the VAD process and get the result
   vad_state_t vad_state = vad_process(vad_inst, vad_buff, VAD_SAMPLE_RATE_HZ, VAD_FRAME_LENGTH_MS);
   if (vad_state == VAD_SPEECH) {

@@ -177,12 +177,12 @@ esp_err_t bsp_extra_codec_init()
     }
 
     play_dev_handle = bsp_audio_codec_speaker_init();
-    assert((play_dev_handle) && "play_dev_handle not initialized");
+    ESP_RETURN_ON_FALSE(play_dev_handle, ESP_FAIL, TAG, "speaker codec initialization failed");
 
     record_dev_handle = bsp_audio_codec_microphone_init();
-    assert((record_dev_handle) && "record_dev_handle not initialized");
+    ESP_RETURN_ON_FALSE(record_dev_handle, ESP_FAIL, TAG, "microphone codec initialization failed");
 
-    bsp_extra_codec_set_fs(CODEC_DEFAULT_SAMPLE_RATE, CODEC_DEFAULT_BIT_WIDTH, CODEC_DEFAULT_CHANNEL);
+    ESP_RETURN_ON_ERROR(bsp_extra_codec_set_fs(CODEC_DEFAULT_SAMPLE_RATE, CODEC_DEFAULT_BIT_WIDTH, CODEC_DEFAULT_CHANNEL), TAG, "codec sample format initialization failed");
 
     _is_audio_init = true;
 

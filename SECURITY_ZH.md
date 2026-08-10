@@ -9,8 +9,7 @@
 
 ## 报告漏洞
 
-若仓库已启用 GitHub 私密漏洞报告，请使用该渠道；否则通过
-[Waveshare 官方联系页](https://www.waveshare.com/contact_us) 联系并明确标注安全敏感。
+请通过 [Waveshare 官方联系页](https://www.waveshare.com/contact_us) 私密报告安全问题。
 
 请提供受影响的硬件修订、固件或示例路径、版本或提交、影响、复现步骤和建议缓解措施。
 在报告完成评估并适合协调披露前，不要创建公开 Issue。

@@ -439,6 +439,10 @@ void app_main(void) {
 
     bus_handle = bsp_i2c_get_handle();
     qmi8658_dev_t *dev = malloc(sizeof(qmi8658_dev_t));
+    if (dev == NULL) {
+        ESP_LOGE(TAG, "Failed to allocate QMI8658 device");
+        return;
+    }
     ESP_ERROR_CHECK(qmi8658_init(dev, bus_handle, QMI8658_ADDRESS_HIGH));
 
     qmi8658_set_accel_range(dev, QMI8658_ACCEL_RANGE_8G);

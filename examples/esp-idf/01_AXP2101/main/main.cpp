@@ -83,6 +83,10 @@ esp_err_t i2c_init() {
 
 // PMU read function using new API
 int pmu_register_read(uint8_t devAddr, uint8_t regAddr, uint8_t *data, uint8_t len) {
+    if (pmu_dev_handle == NULL || (len > 0 && data == NULL)) {
+        ESP_LOGE(TAG, "PMU read called before initialization or with invalid data");
+        return -1;
+    }
     esp_err_t ret = i2c_master_transmit_receive(pmu_dev_handle, &regAddr, 1, data, len, I2C_MASTER_TIMEOUT_MS);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "PMU READ FAILED!");
@@ -93,6 +97,10 @@ int pmu_register_read(uint8_t devAddr, uint8_t regAddr, uint8_t *data, uint8_t l
 
 // PMU write function using new API
 int pmu_register_write_byte(uint8_t devAddr, uint8_t regAddr, uint8_t *data, uint8_t len) {
+    if (pmu_dev_handle == NULL || (len > 0 && data == NULL)) {
+        ESP_LOGE(TAG, "PMU write called before initialization or with invalid data");
+        return -1;
+    }
     uint8_t *buffer = (uint8_t *)std::malloc(len + 1);
     if (!buffer) return -1;
     buffer[0] = regAddr;

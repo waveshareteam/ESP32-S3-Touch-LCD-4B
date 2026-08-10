@@ -30,6 +30,7 @@ __attribute__((aligned(16))) float spectrum[N_SAMPLES / 2];
 
 float display_spectrum[STRIPE_COUNT];
 float peak[STRIPE_COUNT];
+static portMUX_TYPE display_spectrum_mux = portMUX_INITIALIZER_UNLOCKED;
 
 void audio_fft_task(void *pvParameters)
 {
@@ -51,6 +52,7 @@ void audio_fft_task(void *pvParameters)
 
     TickType_t last_wake_time = xTaskGetTickCount();
     size_t bytes_read;
+    float next_display_spectrum[STRIPE_COUNT];
 
     while (1)
     {
@@ -90,8 +92,12 @@ void audio_fft_task(void *pvParameters)
         for (int i = 0; i < STRIPE_COUNT; i++)
         {
             int fft_idx = i * (N_SAMPLES / 2) / STRIPE_COUNT;
-            display_spectrum[i] = fmaxf(-90.0f, fminf(0.0f, spectrum[fft_idx]));
+            next_display_spectrum[i] = fmaxf(-90.0f, fminf(0.0f, spectrum[fft_idx]));
         }
+
+        portENTER_CRITICAL(&display_spectrum_mux);
+        memcpy(display_spectrum, next_display_spectrum, sizeof(display_spectrum));
+        portEXIT_CRITICAL(&display_spectrum_mux);
 
         vTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(1));
     }
@@ -100,6 +106,11 @@ void audio_fft_task(void *pvParameters)
 static void timer_cb(lv_timer_t *timer)
 {
     lv_obj_t *canvas = (lv_obj_t *)lv_timer_get_user_data(timer);
+    float spectrum_snapshot[STRIPE_COUNT];
+    portENTER_CRITICAL(&display_spectrum_mux);
+    memcpy(spectrum_snapshot, display_spectrum, sizeof(spectrum_snapshot));
+    portEXIT_CRITICAL(&display_spectrum_mux);
+
     lv_layer_t layer;
     lv_canvas_init_layer(canvas, &layer);
     lv_canvas_fill_bg(canvas, lv_color_black(), LV_OPA_COVER);
@@ -110,7 +121,7 @@ static void timer_cb(lv_timer_t *timer)
     const int bar_gap_px = 2;
 
     for (int i = 0; i < STRIPE_COUNT; i++) {
-         float db = display_spectrum[i];
+        float db = spectrum_snapshot[i];
         float db_min = -90.0f, db_max = 0.0f;
 
         float norm = (db - db_min) / (db_max - db_min);
