@@ -8,11 +8,15 @@ SCL GPIO48, device address `0x34`, and no direct PMU interrupt pin.
 
 ## Dependencies and Configuration
 
-The project retains XPowersLib as a bundled upstream component under
-`components/XPowersLib`; its upstream source is
-[lewisxhe/XPowersLib](https://github.com/lewisxhe/XPowersLib). Select the PMU and
-I2C values under `XPowers Configuration` when adapting the example to another
-board. A negative interrupt value means the optional IRQ path is disabled.
+The project retains a trimmed bundled copy of XPowersLib under
+`components/XPowersLib`; its exact imported upstream revision is not recorded,
+and its retained MIT license is at `components/XPowersLib/LICENSE`. No
+semantically and hardware-equivalent managed component has been verified, so it
+remains local. Revisit only after a candidate preserves the AXP2101 callback,
+IRQ, and charger APIs and this board's I2C GPIO47/GPIO48/address `0x34`
+configuration on ESP-IDF v5.5.5 and v6.0.2. Select the PMU and I2C values under
+`XPowers Configuration` when adapting the example to another board. A negative
+interrupt value means the optional IRQ path is disabled.
 
 ## Build and Validation
 

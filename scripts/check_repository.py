@@ -17,6 +17,7 @@ REQUIRED_FILES = (
     ".gitignore",
     "CONTRIBUTING.md",
     "LICENSE.txt",
+    "examples/esp-idf/01_AXP2101/components/XPowersLib/LICENSE",
     "README.md",
     "README_CN.md",
     "README_ZH.md",

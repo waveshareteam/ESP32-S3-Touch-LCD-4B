@@ -57,6 +57,12 @@ python3 releases/download_artifacts.py --run-id <run-id> --clean
 `releases/downloads/`。完整参数见[发布工具说明](../releases/README_ZH.md)。`firmware/`
 中的出厂/恢复二进制是已提交发布输入，不会作为源码构建制品上传。
 
+`firmware/` 下的变更永远不会进入示例构建矩阵。固件 Markdown、图片和 PDF 属于纯文档
+变更：会显示 `firmware_changed`，但不需要发布审查。`firmware/checksums.sha256`、二进制、
+归档文件以及源码、配置、脚本或其他非文档文件会设置 `release_review`；聚合任务日志和步骤
+摘要表会显示它、`route` 与 `unknown_paths`。`Repository checks` 会强制校验已提交固件的
+校验和；出现 `release_review` 警告时，合并前必须由人工审查。
+
 ## 静态路由测试
 
 `Repository checks` 会运行 `tests/` 下的合成测试，覆盖纯文档、单个 IDF/Arduino、随包

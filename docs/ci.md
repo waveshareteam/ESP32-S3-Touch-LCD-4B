@@ -81,6 +81,15 @@ complete interface.
 Factory and recovery binaries under `firmware/` are checked-in release inputs
 and are never uploaded as source-built CI artifacts.
 
+Changes under `firmware/` never enter example build matrices. Firmware Markdown,
+images, and PDFs are documentation-only changes: they set the visible
+`firmware_changed` signal but do not require release review. `firmware/checksums.sha256`,
+binaries, archives, and source, configuration, script, or other non-documentation
+files set `release_review`; they are shown with `route` and `unknown_paths` in
+the aggregate job log and step-summary table. `Repository checks` enforces the
+checked-in firmware checksums, and a `release_review` warning requires human
+review before accepting the change.
+
 ## Static Routing Tests
 
 `Repository checks` runs the repository validator and the synthetic routing

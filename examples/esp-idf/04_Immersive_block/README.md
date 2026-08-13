@@ -14,6 +14,11 @@ request recalibration.
 - Waveshare `esp32_s3_touch_lcd_4b` 2.0.0 and `qmi8658` 2.0.0 managed components
 - LVGL 9.5.0
 
+These pins preserve the currently tested Waveshare board, QMI8658 sensor, and
+LVGL 9 display API contract. Revisit the version set only after candidate
+versions build with ESP-IDF v5.5.5 and v6.0.2 and the schematic-backed
+configuration is rechecked; physical-board validation remains separate.
+
 CI validates the project with ESP-IDF v5.5.5 and v6.0.2. Runtime calibration,
 display, and sensor behavior still require physical-board validation.
 

@@ -120,7 +120,8 @@ def classify_paths(repo: Path, paths: list[str]) -> Route:
 
         if lower.startswith("firmware/"):
             route.firmware_changed = True
-            route.release_review = True
+            if lower == "firmware/checksums.sha256" or not is_documentation(path):
+                route.release_review = True
             continue
 
         if lower.startswith("releases/"):
@@ -225,7 +226,6 @@ def make_outputs(repo: Path, route: Route, selector: str) -> dict[str, object]:
         "arduino_count": len(arduino_include),
         "docs_only": (
             no_builds
-            and not route.firmware_changed
             and not route.release_review
             and not route.non_documentation_change
         ),
