@@ -1,0 +1,29 @@
+{
+  "exclude_patterns": [
+    "README_CN.md",
+    "examples/README_CN.md",
+    "firmware/README_CN.md",
+    "docs/wiki-resources_CN.md"
+  ],
+  "homepage_pairs": [
+    {
+      "english": "README.md",
+      "chinese": "README_ZH.md",
+      "profile": "single-product",
+      "required_components": [
+        "centered_header",
+        "html_h1",
+        "subtitle",
+        "badges",
+        "language_switch",
+        "quick_links",
+        "hero_image",
+        "separator",
+        "h2"
+      ],
+      "required_quick_links": ["product", "esp_idf", "arduino", "firmware", "documentation"],
+      "required_badges": ["build", "license"],
+      "required_h2_icons": ["✨", "🖥️", "📦", "🧪", "🗂️", "📚", "🤝", "📄"]
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+# ESP-IDF build output
+build/
+build-*/
+sdkconfig
+sdkconfig.old
+
+managed_components/
+dependencies.lock
+
+# Arduino build output
+.arduinoIDE/
+.arduino-build/
+*.ino.bin
+*.ino.bootloader.bin
+*.ino.elf
+*.ino.map
+*.ino.merged.bin
+*.ino.partitions.bin
+
+# Generated firmware packages and downloads
+release-artifacts/
+releases/dist/
+releases/downloads/
+
+# Editors and operating systems
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Test and tooling caches
+.codex/pdf-preview-cache/
+.pytest_cache/
+__pycache__/
+*.py[cod]

@@ -1,0 +1,215 @@
+name: Build Examples
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - "v*"
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "all, an example name, or a repo-relative example path"
+        required: false
+        default: "all"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: examples-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  classify:
+    name: Classify changed files
+    runs-on: ubuntu-latest
+    outputs:
+      idf_matrix: ${{ steps.route.outputs.idf_matrix }}
+      idf_count: ${{ steps.route.outputs.idf_count }}
+      arduino_matrix: ${{ steps.route.outputs.arduino_matrix }}
+      arduino_count: ${{ steps.route.outputs.arduino_count }}
+      docs_only: ${{ steps.route.outputs.docs_only }}
+      firmware_changed: ${{ steps.route.outputs.firmware_changed }}
+      release_review: ${{ steps.route.outputs.release_review }}
+      route: ${{ steps.route.outputs.route }}
+      unknown_paths: ${{ steps.route.outputs.unknown_paths }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - id: route
+        name: Compute build matrices
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          SELECTOR: ${{ github.event.inputs.target || 'all' }}
+        run: |
+          if [[ "$EVENT_NAME" == "workflow_dispatch" || "${GITHUB_REF_TYPE:-}" == "tag" || "$BASE_SHA" =~ ^0+$ ]]; then
+            python3 scripts/route_examples.py --all --selector "$SELECTOR" --github-output "$GITHUB_OUTPUT"
+          else
+            python3 scripts/route_examples.py --base "$BASE_SHA" --head "$HEAD_SHA" --github-output "$GITHUB_OUTPUT"
+          fi
+      - name: Verify documentation-only route
+        if: >-
+          steps.route.outputs.docs_only == 'true' &&
+          steps.route.outputs.route != 'all' &&
+          github.event_name != 'workflow_dispatch' &&
+          github.ref_type != 'tag' &&
+          github.event.before != '0000000000000000000000000000000000000000'
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python3 scripts/route_examples.py --base "$BASE_SHA" --head "$HEAD_SHA" \
+            --expect-docs-only --expect-no-example-builds
+
+  build-esp-idf:
+    name: ${{ matrix.idf }} / ${{ matrix.name }}
+    needs: classify
+    if: needs.classify.outputs.idf_count != '0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    container: espressif/idf:${{ matrix.idf }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.classify.outputs.idf_matrix) }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Build ${{ matrix.path }} with ESP-IDF ${{ matrix.idf }}
+        shell: bash
+        run: |
+          . "$IDF_PATH/export.sh"
+          idf.py --version
+          idf.py -C "${{ matrix.path }}" -B "build/${{ matrix.name }}-${{ matrix.idf }}" set-target esp32s3 build
+      - name: Package firmware
+        shell: bash
+        run: |
+          python3 releases/package_firmware.py \
+            --framework esp-idf \
+            --project "${{ matrix.path }}" \
+            --build-dir "build/${{ matrix.name }}-${{ matrix.idf }}" \
+            --name "ESP32-S3-Touch-LCD-4B-${{ matrix.name }}-${{ matrix.idf }}" \
+            --framework-version "${{ matrix.idf }}" \
+            --target esp32s3 \
+            --git-sha "${{ github.event.pull_request.head.sha || github.sha }}" \
+            --output-dir release-artifacts
+      - name: Upload firmware artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: firmware-esp-idf-${{ matrix.name }}-${{ matrix.idf }}
+          path: release-artifacts/*.zip
+          if-no-files-found: error
+
+  build-arduino:
+    name: ${{ matrix.name }}
+    needs: classify
+    if: needs.classify.outputs.arduino_count != '0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.classify.outputs.arduino_matrix) }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Install Arduino CLI
+        shell: bash
+        env:
+          ARDUINO_CLI_VERSION: "1.5.1"
+          ARDUINO_CLI_SHA256: "28a8e119c498a25607821c36cb2dc49e8463941b261a0d99091baa7bc692dd2b"
+        run: |
+          archive="arduino-cli_${ARDUINO_CLI_VERSION}_Linux_64bit.tar.gz"
+          install_dir="$RUNNER_TEMP/arduino-cli"
+          mkdir -p "$install_dir"
+          curl --fail --location --retry 3 \
+            --output "$RUNNER_TEMP/$archive" \
+            "https://github.com/arduino/arduino-cli/releases/download/v${ARDUINO_CLI_VERSION}/$archive"
+          printf '%s  %s\n' "$ARDUINO_CLI_SHA256" "$RUNNER_TEMP/$archive" | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$install_dir"
+          echo "$install_dir" >> "$GITHUB_PATH"
+      - name: Cache Arduino packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.arduino15
+          key: arduino-esp32-${{ matrix.core }}-${{ runner.os }}
+      - name: Install ESP32 Arduino core
+        run: |
+          arduino-cli core update-index \
+            --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          arduino-cli core install esp32:esp32@${{ matrix.core }} \
+            --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+      - name: Compile ${{ matrix.path }}
+        shell: bash
+        run: |
+          arduino-cli compile \
+            --fqbn "${{ matrix.fqbn }}" \
+            --libraries examples/arduino/libraries \
+            --build-property "compiler.c.extra_flags=-I${{ github.workspace }}/examples/arduino/libraries" \
+            --build-property "compiler.cpp.extra_flags=-I${{ github.workspace }}/examples/arduino/libraries" \
+            --export-binaries \
+            --output-dir "build/${{ matrix.name }}-${{ matrix.core }}" \
+            "${{ matrix.path }}"
+      - name: Package firmware
+        shell: bash
+        run: |
+          python3 releases/package_firmware.py \
+            --framework arduino \
+            --project "${{ matrix.path }}" \
+            --build-dir "build/${{ matrix.name }}-${{ matrix.core }}" \
+            --name "ESP32-S3-Touch-LCD-4B-${{ matrix.name }}-arduino-${{ matrix.core }}" \
+            --framework-version "${{ matrix.core }}" \
+            --target esp32s3 \
+            --git-sha "${{ github.event.pull_request.head.sha || github.sha }}" \
+            --output-dir release-artifacts
+      - name: Upload firmware artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: firmware-arduino-${{ matrix.name }}-${{ matrix.core }}
+          path: release-artifacts/*.zip
+          if-no-files-found: error
+
+  build-examples:
+    name: Build examples
+    if: always()
+    needs:
+      - classify
+      - build-esp-idf
+      - build-arduino
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce routed build results
+        env:
+          CLASSIFY_RESULT: ${{ needs.classify.result }}
+          IDF_RESULT: ${{ needs.build-esp-idf.result }}
+          ARDUINO_RESULT: ${{ needs.build-arduino.result }}
+          ROUTE: ${{ needs.classify.outputs.route }}
+          FIRMWARE_CHANGED: ${{ needs.classify.outputs.firmware_changed }}
+          RELEASE_REVIEW: ${{ needs.classify.outputs.release_review }}
+          UNKNOWN_PATHS: ${{ needs.classify.outputs.unknown_paths }}
+        run: |
+          test "$CLASSIFY_RESULT" = "success"
+          [[ "$IDF_RESULT" == "success" || "$IDF_RESULT" == "skipped" ]]
+          [[ "$ARDUINO_RESULT" == "success" || "$ARDUINO_RESULT" == "skipped" ]]
+          echo "Validated route: $ROUTE"
+          echo "firmware_changed=$FIRMWARE_CHANGED release_review=$RELEASE_REVIEW unknown_paths=$UNKNOWN_PATHS"
+          {
+            echo "| Routing signal | Value |"
+            echo "| --- | --- |"
+            echo "| route | $ROUTE |"
+            echo "| firmware_changed | $FIRMWARE_CHANGED |"
+            echo "| release_review | $RELEASE_REVIEW |"
+            echo "| unknown_paths | $UNKNOWN_PATHS |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$RELEASE_REVIEW" == "true" ]]; then
+            echo "::warning::Firmware release-review input changed; human review is required."
+          fi

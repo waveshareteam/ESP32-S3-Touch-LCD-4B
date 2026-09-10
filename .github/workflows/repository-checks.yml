@@ -1,0 +1,39 @@
+name: Repository checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: repository-checks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repository-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.x"
+
+      - name: Validate repository
+        run: python scripts/check_repository.py
+
+      - name: Run static routing tests
+        run: python -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Validate release helpers
+        run: |
+          python releases/package_firmware.py --help
+          python releases/download_artifacts.py --help
+          python -m py_compile scripts/check_repository.py scripts/discover_examples.py scripts/route_examples.py releases/package_firmware.py releases/download_artifacts.py releases/download_artifacts_impl.py
