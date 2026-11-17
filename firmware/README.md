@@ -2,37 +2,17 @@
 
 [English](README.md) | [简体中文](README_ZH.md)
 
-This directory contains the factory image imported from the official Waveshare
-Demo archive.
+Firmware for ESP32-S3-Touch-LCD-4B. The BIN is a merged image containing both the factory demo and Xiaozhi AI, flashed at `0x0`.
 
-| Item | Value |
+| File | Purpose |
 | --- | --- |
-| Product | ESP32-S3-Touch-LCD-4B |
-| File | `ESP32-S3-Touch-LCD-4B-FactoryXiaozhi_250807.bin` |
-| Archive identifier | `250807` |
-| Size | 16,732,160 bytes |
-| SHA-256 | `06bc042509e018785b977bdb2e796d8ea555d68c9f22ebe1a64d9dad4f713c1f` |
-| Source | Official Waveshare Demo archive |
+| [ESP32-S3-Touch-LCD-4B_FactoryXiaozhi_20250807.bin](ESP32-S3-Touch-LCD-4B_FactoryXiaozhi_20250807.bin) | Combined factory demo and Xiaozhi AI firmware, dated 2025-08-07 |
 
-From the repository root, verify the file before flashing:
+Run these commands in this directory, replacing `<PORT>` with the board's serial port. Erasing flash removes existing settings and user data.
 
-```sh
-sha256sum -c firmware/checksums.sha256
+```bash
+python -m pip install esptool
+esptool.py --chip esp32s3 --port <PORT> erase_flash
+esptool.py --chip esp32s3 --port <PORT> write_flash 0x0 ESP32-S3-Touch-LCD-4B_FactoryXiaozhi_20250807.bin
 ```
 
-PowerShell users can compare the output of:
-
-```powershell
-Get-FileHash firmware/ESP32-S3-Touch-LCD-4B-FactoryXiaozhi_250807.bin -Algorithm SHA256
-```
-
-Use the flashing procedure on the official
-[product Wiki](https://www.waveshare.net/wiki/ESP32-S3-Touch-LCD-4B), and
-confirm the current offset and flash settings there before writing the image.
-The repository has not independently hardware-validated this binary.
-
-This checked-in factory image is a release/recovery input and is excluded from
-source-build CI. Source and build instructions for the factory firmware are not
-included in this repository yet and may be added in a future update. Do not
-replace this filename with different binary content; add a new versioned file
-and checksum instead.

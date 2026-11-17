@@ -2,31 +2,17 @@
 
 [English](README.md) | [简体中文](README_ZH.md)
 
-本目录包含从 Waveshare 官方 Demo 压缩包导入的出厂镜像。
+ESP32-S3-Touch-LCD-4B 的固件。BIN 同时包含出厂演示和小智 AI，是从 `0x0` 烧录的合并镜像。
 
-| 项目 | 内容 |
+| 文件 | 用途 |
 | --- | --- |
-| 产品 | ESP32-S3-Touch-LCD-4B |
-| 文件 | `ESP32-S3-Touch-LCD-4B-FactoryXiaozhi_250807.bin` |
-| 压缩包标识 | `250807` |
-| 大小 | 16,732,160 字节 |
-| SHA-256 | `06bc042509e018785b977bdb2e796d8ea555d68c9f22ebe1a64d9dad4f713c1f` |
-| 来源 | Waveshare 官方 Demo 压缩包 |
+| [ESP32-S3-Touch-LCD-4B_FactoryXiaozhi_20250807.bin](ESP32-S3-Touch-LCD-4B_FactoryXiaozhi_20250807.bin) | 出厂演示与小智 AI 组合固件，日期为 2025-08-07 |
 
-在仓库根目录校验：
+在本目录运行以下命令，将 `<PORT>` 替换为开发板对应的串口。整片擦除会清除已有设置和用户数据。
 
-```sh
-sha256sum -c firmware/checksums.sha256
+```bash
+python -m pip install esptool
+esptool.py --chip esp32s3 --port <PORT> erase_flash
+esptool.py --chip esp32s3 --port <PORT> write_flash 0x0 ESP32-S3-Touch-LCD-4B_FactoryXiaozhi_20250807.bin
 ```
 
-PowerShell 用户可比较：
-
-```powershell
-Get-FileHash firmware/ESP32-S3-Touch-LCD-4B-FactoryXiaozhi_250807.bin -Algorithm SHA256
-```
-
-请按照官方[产品 Wiki](https://www.waveshare.net/wiki/ESP32-S3-Touch-LCD-4B) 的烧录
-流程，并在写入前核对当前偏移和 Flash 参数。本仓库尚未在实物上独立验证该镜像。
-
-该文件是不可变的发布/恢复输入，不参与源码构建 CI。仓库未包含对应源码和构建说明。
-不得以不同内容覆盖现有文件名；更新时必须新增带版本标识的文件和校验值。
